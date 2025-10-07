@@ -49,5 +49,14 @@ export const quizQuestions = [
   { id: 34, category: "Aspirations & Future", type: "single", question: "What type of brand partnerships excite you most?", options: ["Performance & training","Lifestyle & fashion","Health & wellness","Tech & innovation","Food & beverage","Community impact"] },
 
   // ===== 8. Preferences =====
-  { id: 35, category: "Preferences", type: "slider", question: "Preferred max distance for partnering with local businesses (miles)", min: 0, max: 250, step: 5, defaultValue: 25 }
+   {
+    id: 35,
+    category: "Preferences",
+    type: "slider",
+    question: "What’s your preferred maximum distance for local business matches?",
+    min: 0,
+    max: 250,
+    step: 5,
+    unit: "mi"
+  }
 ];

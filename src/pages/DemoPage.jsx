@@ -96,11 +96,11 @@ function DirectorView() {
 /* Athlete Portal */
 function AthleteView() {
   const athlete = {
-    name: "Jordan Carter",
+    name: "Rootd Athlete",
     sport: "Basketball",
     classYear: "Junior",
-    email: "jordan.carter@demo.edu",
-    socials: { instagram: "@rootd", x: "@rootd", tiktok: "@rootd", youtube: "@rootd" },
+    email: "rootd.athlete@demo.edu",
+    socials: { instagram: "@rootd.tech", x: "@rootd", tiktok: "@rootd", youtube: "@rootd" },
   };
 
   const matches = [

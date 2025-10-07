@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { quizQuestions } from "../data/quizQuestions.js";
 
-// These are optional—kept to integrate with your existing backend if present.
+// Optional—kept to integrate with backend
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { insertQuizResponse, generateAthleteProfile } from "../lib/api.js";
 
@@ -129,7 +129,7 @@ function CheckPill({ checked, onToggle, children }) {
 
 export default function QuizPage() {
   const navigate = useNavigate();
-  const { session } = (useAuth?.() ?? {});
+  const { session } = useAuth?.() ?? {};
   const total = quizQuestions.length;
 
   const [step, setStep] = useState(0);
@@ -159,6 +159,7 @@ export default function QuizPage() {
     if (q.type === "text") return Boolean(String(v ?? "").trim());
     if (q.type === "single") return !!v;
     if (q.type === "multiple") return Array.isArray(v) && v.length > 0;
+    if (q.type === "slider") return typeof v === "number" || typeof q.defaultValue === "number";
     return false;
   }, [answers, q]);
 
@@ -182,6 +183,10 @@ export default function QuizPage() {
         if (item.type === "multiple" && (!Array.isArray(v) || v.length === 0)) {
           throw new Error(`Please answer question ${item.id}.`);
         }
+        if (item.type === "slider") {
+          const val = typeof v === "number" ? v : item.defaultValue;
+          if (typeof val !== "number") throw new Error(`Please answer question ${item.id}.`);
+        }
       }
 
       const payload = {
@@ -190,21 +195,16 @@ export default function QuizPage() {
         responses: answers,
       };
 
-      // If your API helpers exist, use them; otherwise fall back to client route.
       if (insertQuizResponse && session?.user?.id) {
-        const { data: row, error: insErr } = await insertQuizResponse(
-          session.user.id,
-          payload
-        );
+        const { data: row, error: insErr } = await insertQuizResponse(session.user.id, payload);
         if (insErr) throw insErr;
 
-        // Fire-and-forget AI profile generation (if helper is present)
+        // Trigger background AI profile generation if available
         if (generateAthleteProfile) {
           generateAthleteProfile(session.user.id, row?.id).catch(() => {});
         }
       }
 
-      // Success → go to dashboard
       navigate("/dashboard");
     } catch (e) {
       setError(e.message || "There was a problem submitting your answers.");
@@ -244,7 +244,30 @@ export default function QuizPage() {
       );
     }
 
-    // text
+    if (q.type === "slider") {
+      const current =
+        typeof answers[q.id] === "number"
+          ? answers[q.id]
+          : q.defaultValue ?? q.min ?? 0;
+      return (
+        <div style={{ marginTop: 12 }}>
+          <input
+            type="range"
+            min={q.min ?? 0}
+            max={q.max ?? 250}
+            step={q.step ?? 1}
+            value={current}
+            onChange={(e) => setValue(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+          <div className="subtle" style={{ marginTop: 6, fontWeight: 800 }}>
+            {current} miles
+          </div>
+        </div>
+      );
+    }
+
+    // text (default)
     return (
       <div style={{ marginTop: 10 }}>
         <textarea

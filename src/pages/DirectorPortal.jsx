@@ -36,12 +36,8 @@ function seedAthletes() {
     ...a,
     profilePct: ri(60, 98),
     deals: ri(0, 17),
-    followers: {
-      instagram: ri(800, 25000),
-      x: ri(500, 15000),
-      tiktok: ri(1000, 40000),
-    },
-    engagement: Number((Math.random() * 7 + 1).toFixed(2)), // %
+    followers: { instagram: ri(800, 25000), x: ri(500, 15000), tiktok: ri(1000, 40000) },
+    engagement: Number((Math.random() * 7 + 1).toFixed(2)),
     status: ["Active", "Needs Compliance", "Pending Match", "Deal In Progress"][ri(0, 3)],
     docs: { w9: Math.random() > 0.2, training: Math.random() > 0.5, disclosure: Math.random() > 0.6 },
   }));
@@ -52,10 +48,9 @@ export default function DirectorPortal() {
   const [tab, setTab] = useState("Overview");
   const [athletes] = useState(seedAthletes);
 
-  // top KPIs (Overview)
   const totalAthletes = athletes.length;
   const activeDeals = athletes.reduce((s, a) => s + (a.deals > 0 ? 1 : 0), 0);
-  const totalDealValue = 185000; // demo aggregate
+  const totalDealValue = 185000;
   const needsCompliance = athletes.filter(a => a.status === "Needs Compliance").length;
 
   return (
@@ -71,12 +66,12 @@ export default function DirectorPortal() {
         <Metric title="Compliance Alerts" value={needsCompliance} />
       </div>
 
-      {/* Tabs */}
-      <div style={tabsRow}>
+      {/* Tabs: full-width spread */}
+      <nav style={tabsRow}>
         {["Overview","Athletes","Deals","Compliance","Partners","Analytics","Comms","Admin"].map(t => (
           <button key={t} onClick={() => setTab(t)} style={tabBtn(tab === t)}>{t}</button>
         ))}
-      </div>
+      </nav>
 
       {/* Panels */}
       <div style={{ marginTop: 12 }}>
@@ -96,12 +91,12 @@ export default function DirectorPortal() {
 /* -------------------- TABS -------------------- */
 
 function OverviewTab({ athletes }) {
-  const recentNotices = [
-    { type: "warning", text: "Deal approval pending: Blue Bottle x J. Carter" },
-    { type: "success", text: "3 disclosures filed this week" },
-    { type: "error", text: "2 athletes missing W-9" },
+  const recent = [
+    { type: "warning", title: "Deal approval pending", meta: "Blue Bottle x J. Carter", time: "Today • 9:20 AM", cta: "Open" },
+    { type: "success", title: "3 disclosures filed", meta: "This week", time: "Yesterday • 4:02 PM", cta: "Review" },
+    { type: "error", title: "2 athletes missing W-9", meta: "Compliance", time: "Mon • 11:18 AM", cta: "Resolve" },
   ];
-  const topGrowth = [...athletes]
+  const topReach = [...athletes]
     .sort((a, b) => (b.followers.instagram + b.followers.tiktok + b.followers.x) - (a.followers.instagram + a.followers.tiktok + a.followers.x))
     .slice(0, 5);
 
@@ -118,7 +113,7 @@ function OverviewTab({ athletes }) {
 
         <h4 style={h4}>Top Social Reach</h4>
         <div style={listBox}>
-          {topGrowth.map(a => (
+          {topReach.map(a => (
             <div key={a.email} style={row}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={avatar} />
@@ -135,8 +130,24 @@ function OverviewTab({ athletes }) {
 
       <section style={card}>
         <h3 style={h3}>Notifications</h3>
-        {recentNotices.map((n, i) => <Notice key={i} type={n.type} text={n.text} />)}
-        <a href="#" style={link}>View all</a>
+        <div>
+          {recent.map(n => (
+            <div key={n.title} style={noticeRow}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ ...dot, background: n.type==="success" ? "#22C55E" : n.type==="error" ? "#EF4444" : "#F59E0B" }} />
+                <div>
+                  <div style={{ fontWeight: 600 }}>{n.title}</div>
+                  <div style={muted}>{n.meta} • {n.time}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={linkBtn}>{n.cta}</button>
+                <button style={ghostMini}>Dismiss</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <a href="#" style={{ ...link, marginTop: 8, display: "inline-block" }}>View all</a>
       </section>
     </div>
   );
@@ -219,18 +230,13 @@ function AthletesTab({ athletes }) {
 }
 
 function DealsTab({ athletes }) {
-  // Build a mock pipeline from athletes
   const pipeline = [
     { stage: "Suggested", items: mockDeals(8, "Suggested") },
     { stage: "Negotiating", items: mockDeals(5, "Negotiating") },
     { stage: "Active", items: mockDeals(6, "Active") },
     { stage: "Completed", items: mockDeals(12, "Completed") },
   ];
-  const totals = {
-    value: 185000,
-    avgPerAthlete: Math.round(185000 / athletes.length),
-    expiringSoon: 2,
-  };
+  const totals = { value: 185000, avgPerAthlete: Math.round(185000 / athletes.length), expiringSoon: 2 };
 
   return (
     <section style={card}>
@@ -243,7 +249,7 @@ function DealsTab({ athletes }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginTop: 12 }}>
         {pipeline.map(col => (
-          <div key={col.stage} style={{ ...kanbanCol }}>
+          <div key={col.stage} style={kanbanCol}>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>{col.stage}</div>
             {col.items.map((d,i) => (
               <div key={i} style={kanbanCard}>
@@ -284,11 +290,11 @@ function ComplianceTab({ athletes }) {
 
       <h4 style={h4}>Review Queue</h4>
       <div style={tableWrap}>
-        <div style={{ ...thead3 }}>
+        <div style={thead3}>
           <div>Athlete</div><div>Missing</div><div>Status</div>
         </div>
         {queue.map((q,i) => (
-          <div key={i} style={{ ...trow3 }}>
+          <div key={i} style={trow3}>
             <div>{q.athlete}</div>
             <div>{q.missing.join(", ") || "—"}</div>
             <div><Badge status={q.status} /></div>
@@ -305,13 +311,6 @@ function ComplianceTab({ athletes }) {
           </div>
         ))}
       </div>
-
-      <h4 style={h4}>Audit Log</h4>
-      <div style={listBox}>
-        {["W-9 approved for J. Foudy","Disclosure submitted by S. Manuel","Contract signed: Equinox x C. McCaffrey"].map((e,i)=>(
-          <div key={i} style={row}><div>{e}</div><div style={muted}>{new Date().toLocaleDateString()}</div></div>
-        ))}
-      </div>
     </section>
   );
 }
@@ -319,7 +318,6 @@ function ComplianceTab({ athletes }) {
 function PartnersTab() {
   const categories = ["All","Coffee Shop","Restaurant","Apparel","Fitness","Retail","Grocery"];
   const [cat, setCat] = useState("All");
-
   const filtered = PARTNER_BUSINESSES.filter(b => cat==="All" ? true : b.category===cat);
 
   return (
@@ -332,7 +330,7 @@ function PartnersTab() {
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
         <Map markers={filtered} />
-        <div style={{ ...panel }}>
+        <div style={panel}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Directory</div>
           <div style={{ maxHeight: 360, overflowY: "auto" }}>
             {filtered.map((b,i)=>(
@@ -392,7 +390,7 @@ function CommsTab() {
     <section style={card}>
       <h3 style={h3}>Communication</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 10 }}>
-        <div style={{ ...panel }}>
+        <div style={panel}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Announcements</div>
           <div style={{ maxHeight: 260, overflowY: "auto" }}>
             {announcements.map((a,i)=>(
@@ -403,7 +401,7 @@ function CommsTab() {
             ))}
           </div>
         </div>
-        <div style={{ ...panel }}>
+        <div style={panel}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Message Athletes</div>
           <textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Draft a message..." style={textarea} />
           <button style={miniBtn}>Send</button>
@@ -443,19 +441,9 @@ function AdminTab({ athletes }) {
 function mockDeals(n, stage) {
   const brands = ["Blue Bottle","Lululemon","Equinox","Shake Shack","Athleta","SoulCycle","Trader Joe's","Local Diner","Outdoor Voices"];
   const names = ["J. Carter","S. Manuel","K. Ledecky","A. Luck","B. Lopez","R. Sherman","M. Wie"];
-  return Array.from({ length: n }).map(() => ({
-    brand: brands[ri(0, brands.length-1)],
-    athlete: names[ri(0, names.length-1)],
-    value: ri(300, 3500),
-    stage,
-  }));
+  return Array.from({ length: n }).map(() => ({ brand: brands[ri(0, brands.length-1)], athlete: names[ri(0, names.length-1)], value: ri(300, 3500), stage }));
 }
-
-function median(arr) {
-  const a = [...arr].sort((x,y)=>x-y);
-  const mid = Math.floor(a.length/2);
-  return a.length % 2 ? a[mid] : Math.round((a[mid-1]+a[mid])/2);
-}
+function median(arr) { const a = [...arr].sort((x,y)=>x-y); const m = Math.floor(a.length/2); return a.length%2?a[m]:Math.round((a[m-1]+a[m])/2); }
 
 /* -------------------- SHARED COMPONENTS -------------------- */
 
@@ -467,7 +455,6 @@ function Metric({ title, value }) {
     </div>
   );
 }
-
 function MiniStat({ label, value }) {
   return (
     <div style={{ background: "#F8FAFC", border: "1px solid #E5E7EB", borderRadius: 10, padding: 10 }}>
@@ -476,7 +463,6 @@ function MiniStat({ label, value }) {
     </div>
   );
 }
-
 function Dropdown({ label, value, setValue, options }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -500,7 +486,6 @@ function Dropdown({ label, value, setValue, options }) {
     </div>
   );
 }
-
 function Th({ label, colKey, sortCol, setSortCol }) {
   const active = sortCol.key === colKey;
   const arrow = active ? (sortCol.dir === "asc" ? "↑" : "↓") : "↕";
@@ -514,17 +499,6 @@ function Th({ label, colKey, sortCol, setSortCol }) {
     </div>
   );
 }
-
-function Notice({ type, text }) {
-  const color = type === "success" ? "#16A34A" : type === "error" ? "#DC2626" : "#F59E0B";
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", border: "1px solid #E5E7EB", borderRadius: 8, marginTop: 8 }}>
-      <div style={{ color }}>• {text}</div>
-      <a href="#" style={link}>Open</a>
-    </div>
-  );
-}
-
 function Badge({ status }) {
   const map = {
     "Active": { bg: "#ECFDF5", fg: "#065F46" },
@@ -536,16 +510,10 @@ function Badge({ status }) {
     "Completed": { bg: "#F3F4F6", fg: "#111827" },
   };
   const s = map[status] || { bg: "#F3F4F6", fg: "#374151" };
-  return (
-    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, background: s.bg, color: s.fg }}>
-      {status}
-    </span>
-  );
+  return <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, background: s.bg, color: s.fg }}>{status}</span>;
 }
-
 function Map({ markers }) {
   const ref = useRef(null);
-
   useEffect(() => {
     const id = "gmaps-sdk";
     if (!document.getElementById(id)) {
@@ -567,11 +535,7 @@ function Map({ markers }) {
       });
       const bounds = new window.google.maps.LatLngBounds();
       markers.forEach(m => {
-        const marker = new window.google.maps.Marker({
-          map,
-          position: { lat: m.lat, lng: m.lng },
-          title: m.name,
-        });
+        const marker = new window.google.maps.Marker({ map, position: { lat: m.lat, lng: m.lng }, title: m.name });
         const info = new window.google.maps.InfoWindow({
           content: `<div style="font-weight:600">${m.name}</div><div style="font-size:12px;color:#6B7280">${m.category || ""}</div>`,
         });
@@ -592,7 +556,12 @@ const h3 = { margin: 0, marginBottom: 10, fontSize: 16, fontWeight: 800 };
 const h4 = { margin: "14px 0 6px", fontSize: 14, fontWeight: 700 };
 const listBox = { border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" };
 const row = { display: "flex", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid #F1F5F9", fontSize: 14 };
-const tabsRow = { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" };
+const tabsRow = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+  gap: 8,
+  marginTop: 12,
+};
 const link = { color: "#2563EB", fontSize: 12, textDecoration: "none" };
 const muted = { fontSize: 12, color: "#6B7280" };
 
@@ -616,4 +585,20 @@ const ddBtn = { background: "#F8FAFC", border: "1px solid #E5E7EB", padding: "8p
 const ddMenu = { position: "absolute", top: 42, left: 0, right: 0, overflow: "hidden", background: "#fff", border: "1px solid #E5E7EB", borderRadius: 8, transition: "all .18s ease", zIndex: 10, boxShadow: "0 8px 20px rgba(0,0,0,.06)" };
 const ddItem = { padding: "8px 10px", cursor: "pointer" };
 const avatar = { width: 28, height: 28, borderRadius: "50%", background: "#E5E7EB" };
-function tabBtn(active) { return { padding: "8px 12px", borderRadius: 10, border: "1px solid #E5E7EB", background: active ? "#111827" : "#fff", color: active ? "#fff" : "#111827", cursor: "pointer", fontWeight: 600 }; }
+function tabBtn(active) {
+  return {
+    padding: "8px 12px",
+    borderRadius: 10,
+    border: "1px solid #E5E7EB",
+    background: active ? "#111827" : "#fff",
+    color: active ? "#fff" : "#111827",
+    cursor: "pointer",
+    fontWeight: 600,
+    width: "100%",
+  };
+}
+const miniBtn = { background: "#111827", color: "#fff", border: "1px solid #111827", borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer" };
+const linkBtn = { background: "#111827", color: "#fff", border: "1px solid #111827", borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer" };
+const ghostMini = { background: "#fff", color: "#111827", border: "1px solid #E5E7EB", borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer" };
+const noticeRow = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", border: "1px solid #E5E7EB", borderRadius: 8, marginBottom: 8, background: "#fff" };
+const dot = { width: 8, height: 8, borderRadius: "50%" };

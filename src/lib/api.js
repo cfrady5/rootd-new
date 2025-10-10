@@ -1,9 +1,13 @@
 // src/lib/api.js
 import { supabase } from "./supabaseClient.js";
 
-/* Utility: remove undefined to avoid schema errors */
+/* --------------------------- Utils --------------------------- */
 function compact(obj) {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+}
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || "";
 }
 
 /* ------------------------- Profiles ------------------------- */
@@ -18,7 +22,6 @@ export async function getProfile(userId) {
 }
 
 export async function upsertProfileBasics(userId, basics) {
-  // Your table doesn't have class_year or sport. Keep to known columns.
   const patch = compact({
     id: userId,
     full_name: basics.full_name ?? null,
@@ -46,6 +49,7 @@ export async function getSocials(userId) {
     .eq("user_id", userId)
     .maybeSingle();
   if (error && error.code !== "PGRST116") throw error;
+
   const row = data || {};
   return {
     instagram: { handle: row.instagram_handle || "", followers: row.instagram_followers || 0 },
@@ -92,12 +96,12 @@ export async function getLatestQuizResponse(userId) {
   return data || null;
 }
 
-/** Insert a quiz response (answers must be an object; the table enforces NOT NULL). */
 export async function insertQuizResponse(userId, answers, meta = {}) {
   if (!userId) throw new Error("insertQuizResponse: userId required");
   if (!answers || typeof answers !== "object") {
     throw new Error("insertQuizResponse: answers (object) required");
   }
+
   const row = compact({
     user_id: userId,
     answers, // jsonb NOT NULL
@@ -131,27 +135,89 @@ export async function getBusinessMatches(userId, limit = 10) {
 
 /* ---------------------- Edge: process-quiz ------------------ */
 /**
- * Invoke the edge function that:
- *   - reads the latest quiz for user_id (or quiz_response_id)
- *   - uses OpenAI to analyze
- *   - calls Google Places within radius
- *   - stores results in business_matches
+ * Calls edge function `process-quiz` with:
+ *  - athleteId (string), quizResponseId (string), lat, lng, radiusMiles
+ * Surfaces server JSON when possible (helps debugging 400s).
  */
 export async function processQuiz(userId, opts = {}) {
   if (!userId) throw new Error("processQuiz: userId required");
 
   const { quizResponseId, lat, lng, radiusMiles } = opts;
-  const body = compact({
-    user_id: userId,
-    quiz_response_id: quizResponseId,
-    lat: typeof lat === "number" ? lat : undefined,
-    lng: typeof lng === "number" ? lng : undefined,
-    radius_m: typeof radiusMiles === "number" ? Math.round(radiusMiles * 1609.34) : undefined,
-  });
+  const body = {
+    athleteId: userId,
+    quizResponseId: quizResponseId || null,
+    lat: typeof lat === "number" ? lat : null,
+    lng: typeof lng === "number" ? lng : null,
+    radiusMiles: typeof radiusMiles === "number" ? radiusMiles : 10,
+  };
 
   const { data, error } = await supabase.functions.invoke("process-quiz", { body });
   if (error) {
+    // Try to read the JSON error body from the function for clearer diagnostics
+    try {
+      const token = await getAccessToken();
+      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-quiz`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => null);
+      if (j) console.error("[process-quiz:error-body]", j);
+    } catch {}
     throw new Error(`process-quiz ${error.status || ""}: ${JSON.stringify(error)} | body=${JSON.stringify(body)}`);
   }
   return data;
+}
+
+/* ------------------- Edge: enrich-business ------------------ */
+/**
+ * Fetches Google Place details and updates business_matches (and optionally businesses table).
+ * Required: athlete_id, business_place_id
+ */
+export async function enrichBusiness({
+  athlete_id,
+  business_place_id,
+  update_businesses_table = false,
+  business_id = null,
+}) {
+  if (!athlete_id) throw new Error("enrichBusiness: athlete_id required");
+  if (!business_place_id) throw new Error("enrichBusiness: business_place_id required");
+
+  const { data, error } = await supabase.functions.invoke("enrich-business", {
+    body: { athlete_id, business_place_id, update_businesses_table, business_id },
+  });
+  if (error) throw error;
+  return data;
+}
+
+/* ------------------- Edge: generate-pitch ------------------- */
+/**
+ * Creates an AI draft pitch and stores it in pitch_drafts.
+ * Required: athlete_id
+ * Provide either business_id OR business_place_id (+ optional name/category/address), and channel ('email'|'instagram'|'tiktok'|'x').
+ */
+export async function generatePitchDraft({
+  athlete_id,
+  business_id = null,
+  business_place_id = null,
+  name = null,
+  category = null,
+  address = null,
+  channel = "email",
+}) {
+  if (!athlete_id) throw new Error("generatePitchDraft: athlete_id required");
+
+  const body = compact({
+    athlete_id,
+    business_id,
+    business_place_id,
+    name,
+    category,
+    address,
+    channel,
+  });
+
+  const { data, error } = await supabase.functions.invoke("generate-pitch", { body });
+  if (error) throw error;
+  return data; // { ok:true, id, draft, channel, business_id, business_place_id }
 }

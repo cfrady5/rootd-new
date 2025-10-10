@@ -1,62 +1,52 @@
-// src/data/quizQuestions.js
 export const quizQuestions = [
-  // ===== 1. Profile Basics =====
-  { id: 1, category: "Profile Basics", type: "text", question: "Where do you go to school?", placeholder: "e.g. Purdue University" },
-  { id: 2, category: "Profile Basics", type: "single", question: "What year are you in school?", options: ["Freshman","Sophomore","Junior","Senior","Graduate student","Other"] },
-  { id: 3, category: "Profile Basics", type: "single", question: "Which sport do you play?", options: ["Basketball","Football","Soccer","Baseball","Softball","Volleyball","Track & Field","Cross Country","Swimming & Diving","Wrestling","Tennis","Golf","Gymnastics","Lacrosse","Hockey","Cheer / Dance","Esports","Other"] },
-  { id: 4, category: "Profile Basics", type: "single", question: "What is your position or event specialty?", options: ["Guard / Perimeter","Forward / Wing","Center","Quarterback","Running Back","Receiver / Tight End","Defensive / Lineman","Midfielder","Goalkeeper","Sprinter","Distance","Thrower / Field","Other"] },
-  { id: 5, category: "Profile Basics", type: "single", question: "Scholarship status", options: ["Full","Partial","None","Prefer not to say"] },
-  { id: 6, category: "Profile Basics", type: "single", question: "Roster status", options: ["Starter","Key rotation","Role player","Redshirt","Injured / rehab","Walk-on"] },
+  // ===== Account & Context (non-scored but required) =====
+  { id: 1,  category: "Account", type: "text",    question: "School", placeholder: "e.g. Purdue University", mapsTo: [] },
+  { id: 2,  category: "Account", type: "single",  question: "Sport", options: ["Basketball","Football","Soccer","Baseball","Softball","Volleyball","Track & Field","Cross Country","Swimming & Diving","Wrestling","Tennis","Golf","Gymnastics","Lacrosse","Hockey","Cheer / Dance","Esports","Other"], mapsTo: [] },
 
-  // ===== 2. Motivation & Goals =====
-  { id: 7, category: "Motivation & Goals", type: "single", question: "What drives you most as an athlete?", options: ["Proving myself","Representing my school/community","Building my brand","Providing for my family","Inspiring others"] },
-  { id: 8, category: "Motivation & Goals", type: "single", question: "Which statement best fits your current mindset?", options: ["I’m focused purely on performance","I’m balancing performance with building my platform","I’m looking for NIL deals that fit my values","I’m exploring creative side projects"] },
-  { id: 9, category: "Motivation & Goals", type: "single", question: "How would you describe your leadership style?", options: ["Lead by example","Motivate through words","Calm and steady presence","High-energy / hype","Quietly focused on my craft"] },
-  { id: 10, category: "Motivation & Goals", type: "single", question: "What do you want fans to remember most about your career?", options: ["Work ethic","Character and integrity","Team success","Personal records","Community impact"] },
-  { id: 11, category: "Motivation & Goals", type: "single", question: "Your top NIL goal:", options: ["Supplement income","Grow personal brand","Support my family","Launch a business","Give back locally"] },
+  // ===== Platforms & Performance =====
+  { id: 3,  category: "Platforms", type: "number", question: "Instagram followers", suffix: "", mapsTo: ["platformOverlapIndex","localInfluenceDensity"] },
+  { id: 4,  category: "Platforms", type: "number", question: "TikTok followers", suffix: "", mapsTo: ["platformOverlapIndex","localInfluenceDensity"] },
+  { id: 5,  category: "Platforms", type: "slider", question: "Average posts per week (all platforms)", min: 0, max: 14, step: 1, mapsTo: ["consistencyIndex","cadenceSync","athleteScore"] },
+  { id: 6,  category: "Platforms", type: "number", question: "Typical likes per IG post", mapsTo: ["engagementAuthenticity","conversionPropensity"] },
+  { id: 7,  category: "Platforms", type: "number", question: "Typical comments per IG post", mapsTo: ["engagementAuthenticity"] },
+  { id: 8,  category: "Platforms", type: "slider", question: "Estimated % of followers in your college town", min: 0, max: 100, step: 5, unit: "%", mapsTo: ["localInfluenceDensity"] },
 
-  // ===== 3. Content & Brand Presence =====
-  { id: 12, category: "Content & Brand Presence", type: "multiple", question: "Which platforms are you active on?", options: ["Instagram","TikTok","YouTube","X (Twitter)","Twitch","Facebook","LinkedIn"] },
-  { id: 13, category: "Content & Brand Presence", type: "single", question: "How often do you post?", options: ["Daily","2–3x/week","Weekly","Monthly","Rarely"] },
-  { id: 14, category: "Content & Brand Presence", type: "multiple", question: "What do you post most often? (Select all)", options: ["Game highlights","Training / workouts","Behind-the-scenes","Motivation / faith","Humor / trends","Fashion / lifestyle","Tech / gaming","Food / reviews","School life"] },
-  { id: 15, category: "Content & Brand Presence", type: "single", question: "Comfort level creating sponsored content", options: ["Very comfortable","Somewhat comfortable","Neutral","Somewhat uncomfortable","Not comfortable yet"] },
-  { id: 16, category: "Content & Brand Presence", type: "single", question: "Preferred content style", options: ["Cinematic / polished","Casual / authentic","Funny / trending","Inspirational / story-driven","Educational / informative"] },
+  // ===== Brand Tone & Content =====
+  { id: 9,  category: "Brand", type: "single", question: "Preferred brand tone", options: ["Polished","Authentic","Funny","Inspirational","Educational"], mapsTo: ["toneAlignment","aestheticFit"] },
+  { id: 10, category: "Brand", type: "multiple", question: "Content formats you can deliver", options: ["Short-form video","Photos","Livestreams","Podcasts","In-person events","Blogs"], mapsTo: ["contentTypeCompat","crossPlatformPotential"] },
+  { id: 11, category: "Brand", type: "single", question: "Comfort making sponsored posts", options: ["Very comfortable","Somewhat","Neutral","Not yet"], mapsTo: ["mediaQuality","contentTypeCompat"] },
+  { id: 12, category: "Brand", type: "multiple", question: "Your usual content themes", options: ["Game highlights","Training","Behind-the-scenes","Humor/trends","Lifestyle/fashion","Tech/gaming","Food/reviews","Community"], mapsTo: ["interestMatch","aestheticFit"] },
 
-  // ===== 4. Personality & Lifestyle =====
-  { id: 17, category: "Personality & Lifestyle", type: "single", question: "How would close friends describe you?", options: ["Outgoing","Chill","Focused","Funny","Balanced"] },
-  { id: 18, category: "Personality & Lifestyle", type: "multiple", question: "Pick words that describe your off-court vibe", options: ["Hype","Minimal","Faith-forward","Family-first","Creative","Scholarly","Trendsetter","Introverted"] },
-  { id: 19, category: "Personality & Lifestyle", type: "multiple", question: "What do you enjoy most in downtime?", options: ["Gaming","Music / creating","Reading / studying","Volunteering","Coaching / mentoring","Content creation","Travel / exploring","Fashion / styling"] },
-  { id: 20, category: "Personality & Lifestyle", type: "single", question: "What best describes your personal brand tone?", options: ["Motivational","Entertaining","Educational","Faith-based","Lifestyle / fashion","Community-focused"] },
-  { id: 21, category: "Personality & Lifestyle", type: "multiple", question: "Preferred content formats", options: ["Short-form video (Reels / TikTok)","Photo posts","Podcasts","Livestreams","Blogs / written pieces"] },
+  // ===== Interests, Values, Personality =====
+  { id: 13, category: "Fit", type: "ranked", question: "Top 3 industries you want to partner with (rank)", options: ["Coffee/cafés","Restaurants","Gyms/fitness","Health & wellness","Retail/apparel","Tech/startups","Education/tutoring","Automotive","Media/entertainment","Travel/hospitality"], max: 3, mapsTo: ["interestMatch","valueAlignment"] },
+  { id: 14, category: "Fit", type: "multiple", question: "Causes you care about", options: ["Youth mentorship","Education/literacy","Mental health","Faith-based","Environment","Food security","Local business growth","Veteran support","Inclusion"], mapsTo: ["valueAlignment","communityPresence"] },
+  { id: 15, category: "Fit", type: "slider", question: "Community involvement frequency", min: 0, max: 5, step: 1, mapsTo: ["communityPresence","eventSync"] },
+  // Personality sliders (1–5)
+  { id: 16, category: "Personality", type: "slider", question: "I like leading on camera", min: 1, max: 5, step: 1, mapsTo: ["personalityCompat","responseLikelihood"] },
+  { id: 17, category: "Personality", type: "slider", question: "I prefer polished visuals over casual posts", min: 1, max: 5, step: 1, mapsTo: ["aestheticFit"] },
+  { id: 18, category: "Personality", type: "slider", question: "I enjoy trying trending formats", min: 1, max: 5, step: 1, mapsTo: ["viralityScore","toneAlignment"] },
 
-  // ===== 5. Community & Causes =====
-  { id: 22, category: "Community & Causes", type: "single", question: "How connected do you feel to your local community?", options: ["Very connected","Somewhat connected","Occasionally involved","Not active yet"] },
-  { id: 23, category: "Community & Causes", type: "multiple", question: "Which causes are you most passionate about? (Select all)", options: ["Youth mentorship","Education / literacy","Mental health","Faith-based initiatives","Environmental sustainability","Food security","Local business growth","Veteran support","Equality & inclusion"] },
-  { id: 24, category: "Community & Causes", type: "single", question: "Would you participate in charity events or appearances?", options: ["Definitely","Probably","Maybe","Probably not","No"] },
-  { id: 25, category: "Community & Causes", type: "multiple", question: "Local industries you’d love to partner with", options: ["Coffee / cafés","Gyms / training","Restaurants / food trucks","Tech / startups","Health / wellness","Arts / music / culture","Retail / apparel","Automotive / dealerships","Education / tutoring"] },
-  { id: 26, category: "Community & Causes", type: "single", question: "Community visibility level", options: ["Very active","Somewhat active","Occasional","Not active yet"] },
+  // ===== Economics & Compensation =====
+  { id: 19, category: "Compensation", type: "slider", question: "Minimum value for a sponsored post (USD)", min: 0, max: 5000, step: 50, unit: "$", mapsTo: ["priceFitRatio","athleteScore"] },
+  { id: 20, category: "Compensation", type: "single", question: "Accept non-cash (free product/store credit)?", options: ["Yes","No"], mapsTo: ["compTypeMatch","athleteScore"] },
+  { id: 21, category: "Compensation", type: "single", question: "Open to multi-month collaborations?", options: ["Yes","No"], mapsTo: ["dealComplexityTolerance","longevityIndex"] },
 
-  // ===== 6. NIL Readiness =====
-  { id: 27, category: "NIL Readiness", type: "single", question: "How confident are you managing NIL contracts?", options: ["Very confident","Somewhat confident","Neutral","Need help","Not confident"] },
-  { id: 28, category: "NIL Readiness", type: "single", question: "Would you like resources on taxes / compliance?", options: ["Yes","Maybe","No"] },
-  { id: 29, category: "NIL Readiness", type: "multiple", question: "What support do you need most?", options: ["Social media strategy","Brand partnerships","Legal guidance","Financial literacy","Time management","Public speaking","Portfolio / media kit"] },
-  { id: 30, category: "NIL Readiness", type: "single", question: "If offered a new NIL deal, what matters most?", options: ["Compensation","Brand values","Audience growth","Community impact","Product quality"] },
-  { id: 31, category: "NIL Readiness", type: "single", question: "Would you like help building a media kit?", options: ["Yes, please","Maybe later","I already have one"] },
+  // ===== Availability & Distance =====
+  { id: 22, category: "Timing", type: "multiple", question: "Available months for NIL activities", options: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], mapsTo: ["scheduleCompatibility","campaignTimingMatch"] },
+  { id: 23, category: "Location", type: "slider", question: "Preferred maximum distance for local business matches", min: 0, max: 250, step: 5, unit: "mi", mapsTo: ["distanceMiles","localInfluenceDensity"] },
 
-  // ===== 7. Aspirations & Future =====
-  { id: 32, category: "Aspirations & Future", type: "single", question: "Which area would you most like to grow in after graduation?", options: ["Professional athletics","Coaching / sports leadership","Entrepreneurship","Media / content creation","Corporate career","Community or nonprofit work"] },
-  { id: 33, category: "Aspirations & Future", type: "multiple", question: "Industries you want to work with long-term (Select all)", options: ["Sports performance / recovery","Finance / investing","Education / edtech","Travel / hospitality","Media / entertainment","Real estate","Consumer products","Technology / AI"] },
-  { id: 34, category: "Aspirations & Future", type: "single", question: "What type of brand partnerships excite you most?", options: ["Performance & training","Lifestyle & fashion","Health & wellness","Tech & innovation","Food & beverage","Community impact"] },
+  // ===== Compliance & Readiness =====
+  { id: 24, category: "Compliance", type: "slider", question: "Confidence managing NIL contracts", min: 1, max: 5, step: 1, mapsTo: ["institutionalApprovalReady","athleteScore"] },
+  { id: 25, category: "Compliance", type: "single", question: "KYC/Tax/Payout setup complete?", options: ["Yes","No"], mapsTo: ["paymentReadiness","athleteScore"] },
+  { id: 26, category: "Compliance", type: "multiple", question: "Support you want from Rootd", options: ["Social strategy","Brand partnerships","Legal guidance","Financial literacy","Time management","Media kit"], mapsTo: ["contractClarityScore"] },
 
-  // ===== 8. Preferences =====
-   {
-    id: 35,
-    category: "Preferences",
-    type: "slider",
-    question: "What’s your preferred maximum distance for local business matches?",
-    min: 0,
-    max: 250,
-    step: 5,
-    unit: "mi"
-  }
+  // ===== Risk & Safety =====
+  { id: 27, category: "Safety", type: "single", question: "I agree to avoid restricted categories per school policy", options: ["Agree","Unsure"], mapsTo: ["categoryRestrictionMatch"] },
+  { id: 28, category: "Safety", type: "single", question: "My recent content is brand-safe for family audiences", options: ["Yes","Not sure"], mapsTo: ["brandSafetyAlignment"] },
+
+  // ===== Platform Focus & Cadence Sync =====
+  { id: 29, category: "Platform Focus", type: "multiple", question: "Platforms you want to prioritize with brands", options: ["Instagram","TikTok","YouTube","X (Twitter)","Twitch","LinkedIn"], mapsTo: ["platformOverlapIndex","crossPlatformPotential","cadenceSync"] },
+
+  // ===== Reputation & References =====
+  { id: 30, category: "Reputation", type: "single", question: "Coach/mentor reference available if needed", options: ["Yes","No"], mapsTo: ["reputationIndex","peerRecommendation"] }
 ];

@@ -11,6 +11,7 @@ import {
   processQuiz,
 } from "../lib/api.js";
 import { supabase } from "../lib/supabaseClient.js";
+import MatchCard from "../components/MatchCard.jsx";
 
 /* Local storage */
 const LS_KEY = "rootd_demo_profile_v3";
@@ -79,7 +80,7 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState("Profile"); // Merged "Overview" + "My Profile" -> "Profile"
   const [builderDraft, setBuilderDraft] = useState(null);
   const [autoPulled, setAutoPulled] = useState(false);
 
@@ -144,7 +145,7 @@ export default function Dashboard() {
         setSocials(nextSocials);
         saveDemo(nextBasics, nextSocials);
         setEditing(false);
-        setTab("My Profile");
+        setTab("Profile");
         setSavedMsg("Saved locally (Demo Mode)");
         return;
       }
@@ -155,7 +156,7 @@ export default function Dashboard() {
       setSocials(savedSocials);
       saveDemo(savedBasics, savedSocials);
       setEditing(false);
-      setTab("My Profile");
+      setTab("Profile");
       setSavedMsg("Saved");
     } catch (err) {
       console.error("[saveAll]", err);
@@ -166,7 +167,6 @@ export default function Dashboard() {
     }
   };
 
-  /* Use browser geolocation to avoid defaulting to Indianapolis in the function. */
   const getGeo = () =>
     new Promise((resolve) => {
       if (!("geolocation" in navigator)) return resolve(null);
@@ -185,7 +185,7 @@ export default function Dashboard() {
       return;
     }
 
-    const geo = await getGeo(); // null-safe
+    const geo = await getGeo();
     const radiusMiles = Number((builderDraft || profile)?.preferred_radius_miles || 10);
 
     await processQuiz(userId, {
@@ -239,7 +239,7 @@ export default function Dashboard() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {!editing ? (
               <>
-                <button style={pill} onClick={() => { setEditing(true); setTab("My Profile"); }}>✏️ Edit</button>
+                <button style={pill} onClick={() => { setEditing(true); setTab("Profile"); }}>✏️ Edit</button>
                 <button style={ghost} onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}>Sign out</button>
               </>
             ) : (
@@ -252,25 +252,42 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          <button style={tabBtn(tab === "Overview")} onClick={() => setTab("Overview")}>Overview</button>
+          <button style={tabBtn(tab === "Profile")} onClick={() => setTab("Profile")}>Profile</button>
           <button style={tabBtn(tab === "Profile Builder")} onClick={() => setTab("Profile Builder")}>Profile Builder</button>
-          <button style={tabBtn(tab === "My Profile")} onClick={() => setTab("My Profile")}>My Profile</button>
           <button style={tabBtn(tab === "My Matches")} onClick={() => setTab("My Matches")}>My Matches</button>
         </div>
       </section>
 
-      {tab === "Overview" && (
+      {tab === "Profile" && (
         <>
+          {/* Stats (from former Overview) */}
           <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 16 }}>
             <StatCard label="Active Deals" value="2" />
             <StatCard label="Compliance" value="All Clear" />
             <StatCard label="Total Followers" value={totalFollowers.toLocaleString()} />
           </section>
+
+          {/* Read-only profile (from former My Profile) OR editable */}
           <section style={{ ...surface, padding: 20, marginTop: 16 }}>
             {!editing ? (
-              <BasicsReadOnly profile={profile} />
+              <>
+                <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>My Profile</h3>
+                <BasicsReadOnly profile={profile} />
+                <div style={{ marginTop: 16 }}>
+                  <SocialsReadOnly socials={socials} />
+                </div>
+              </>
             ) : (
-              <EditBasics profile={profile} onSave={(patch) => saveAll(patch)} onCancel={() => setEditing(false)} onLocalChange={(patch) => setProfile((p) => ({ ...p, ...patch }))} saving={saving} />
+              <>
+                <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>Edit Profile</h3>
+                <EditBasics
+                  profile={profile}
+                  onSave={(patch) => saveAll(patch)}
+                  onCancel={() => setEditing(false)}
+                  onLocalChange={(patch) => setProfile((p) => ({ ...p, ...patch }))}
+                  saving={saving}
+                />
+              </>
             )}
           </section>
         </>
@@ -284,17 +301,14 @@ export default function Dashboard() {
               Prefilled from your latest quiz and socials. Review and save to publish.
             </div>
           )}
-          <BuilderForm draft={builderDraft} socials={socials} onDraft={(patch) => setBuilderDraft((d) => ({ ...(d || {}), ...patch }))} onSocials={(k, patch) => setSocials((s) => ({ ...s, [k]: { ...(s[k] || {}), ...patch } }))} onSave={() => saveAll(builderDraft, socials)} saving={saving} />
-        </section>
-      )}
-
-      {tab === "My Profile" && (
-        <section style={{ ...surface, padding: 20, marginTop: 16 }}>
-          <h3 style={{ margin: "0 0 10px", color: "#0f172a" }}>My Profile</h3>
-          <BasicsReadOnly profile={profile} />
-          <div style={{ marginTop: 16 }}>
-            <SocialsReadOnly socials={socials} />
-          </div>
+          <BuilderForm
+            draft={builderDraft}
+            socials={socials}
+            onDraft={(patch) => setBuilderDraft((d) => ({ ...(d || {}), ...patch }))}
+            onSocials={(k, patch) => setSocials((s) => ({ ...s, [k]: { ...(s[k] || {}), ...patch } }))}
+            onSave={() => saveAll(builderDraft, socials)}
+            saving={saving}
+          />
         </section>
       )}
 
@@ -312,16 +326,7 @@ export default function Dashboard() {
               </div>
             ) : (
               matches.map((m, i) => (
-                <div key={`${m.place_id || m.id || i}-${m.created_at || i}`} style={{ padding: 12, borderRadius: 12, border: "1px solid #eef2f6", background: "#f9fbfc" }}>
-                  <div style={{ fontWeight: 800 }}>{m.name}</div>
-                  <div className="subtle" style={{ marginTop: 4 }}>
-                    {m.category || "local"} • {m.address || "nearby"}
-                  </div>
-                  <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
-                    {m.website ? (<a href={m.website} target="_blank" rel="noreferrer">Website</a>) : null}
-                    {m.phone ? <span style={{ fontSize: 12 }}>{m.phone}</span> : null}
-                  </div>
-                </div>
+                <MatchCard key={`${m.place_id || m.id || i}-${m.created_at || i}`} m={normalizeMatch(m)} athleteId={userId || "demo-user"} />
               ))
             )}
           </div>
@@ -329,6 +334,19 @@ export default function Dashboard() {
       )}
     </div>
   );
+}
+
+/* Normalizer so MatchCard fields are present */
+function normalizeMatch(m) {
+  return {
+    id: m.id || m.place_id || `${m.name}|${m.address}`,
+    name: m.name || "Business",
+    rating: typeof m.business_rating === "number" ? m.business_rating : m.rating,
+    category: m.category || "local",
+    address: m.address || m.vicinity || "",
+    website: m.website || null,
+    reason: m.reason || (typeof m.match_score === "number" ? `Match score ${(m.match_score * 100).toFixed(0)}%` : null),
+  };
 }
 
 /* Subcomponents */

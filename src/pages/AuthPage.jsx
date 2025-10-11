@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient.js";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/useAuth.js";
 
 export default function AuthPage() {
   const auth = useAuth();

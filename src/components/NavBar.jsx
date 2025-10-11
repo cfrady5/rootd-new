@@ -1,7 +1,7 @@
 // src/components/NavBar.jsx
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/useAuth.js";
 import logo from "../assets/rootd-logo.png";
 
 const linkBase = {

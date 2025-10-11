@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import quizQuestions, { quizQuestions as namedQuiz } from "../data/quizQuestions.js";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/useAuth.js";
 import { insertQuizResponse } from "../lib/api.js";
 
 const green = "#0FA958";

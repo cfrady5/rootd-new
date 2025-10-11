@@ -122,27 +122,43 @@ export async function insertQuizResponse(userId, answers, meta = {}) {
 }
 
 /* --------------------- Business Matches --------------------- */
-export async function getBusinessMatches(userId, limit = 10) {
+// NOTE: process-quiz persists athlete_id
+export async function getBusinessMatches(athleteId, limit = 20) {
   const { data, error } = await supabase
     .from("business_matches")
     .select("*")
-    .eq("user_id", userId)
+    .eq("athlete_id", athleteId)
+    .order("match_score", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
   return data || [];
 }
 
+export function subscribeBusinessMatches(athleteId, onChange) {
+  const ch = supabase
+    .channel(`bm_${athleteId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "business_matches", filter: `athlete_id=eq.${athleteId}` },
+      () => onChange?.()
+    )
+    .subscribe();
+  return () => supabase.removeChannel(ch);
+}
+
+export function mergeMatches(existing = [], incoming = []) {
+  const key = (m) => m.business_place_id || m.place_id || m.id || m.name;
+  const map = new Map(existing.map((m) => [key(m), m]));
+  for (const m of incoming) map.set(key(m), m);
+  return [...map.values()].sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0));
+}
+
 /* ---------------------- Edge: process-quiz ------------------ */
-/**
- * Calls edge function `process-quiz` with:
- *  - athleteId (string), quizResponseId (string), lat, lng, radiusMiles
- * Surfaces server JSON when possible (helps debugging 400s).
- */
 export async function processQuiz(userId, opts = {}) {
   if (!userId) throw new Error("processQuiz: userId required");
-
   const { quizResponseId, lat, lng, radiusMiles } = opts;
+
   const body = {
     athleteId: userId,
     quizResponseId: quizResponseId || null,
@@ -151,29 +167,39 @@ export async function processQuiz(userId, opts = {}) {
     radiusMiles: typeof radiusMiles === "number" ? radiusMiles : 10,
   };
 
+  // Invoke through functions client
   const { data, error } = await supabase.functions.invoke("process-quiz", { body });
   if (error) {
-    // Try to read the JSON error body from the function for clearer diagnostics
+    // Try raw call for clearer JSON error
     try {
-      const token = await getAccessToken();
-      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-quiz`, {
+      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-quiz`;
+      const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${anon}` },
         body: JSON.stringify(body),
       });
-      const j = await r.json().catch(() => null);
-      if (j) console.error("[process-quiz:error-body]", j);
+      const j = await res.json().catch(() => null);
+      console.error("[process-quiz:error-body]", j);
     } catch {}
     throw new Error(`process-quiz ${error.status || ""}: ${JSON.stringify(error)} | body=${JSON.stringify(body)}`);
   }
+
+  // Surface debug in console so you can see why count is 0
+  if (data && typeof data === "object") {
+    console.log("[process-quiz:resp]", {
+      ok: data.ok,
+      count_saved: data.count_saved,
+      matches_len: Array.isArray(data.matches) ? data.matches.length : null,
+      used_location: data.used_location,
+      debug: data.debug || null,
+    });
+  }
+
   return data;
 }
 
 /* ------------------- Edge: enrich-business ------------------ */
-/**
- * Fetches Google Place details and updates business_matches (and optionally businesses table).
- * Required: athlete_id, business_place_id
- */
 export async function enrichBusiness({
   athlete_id,
   business_place_id,
@@ -191,11 +217,6 @@ export async function enrichBusiness({
 }
 
 /* ------------------- Edge: generate-pitch ------------------- */
-/**
- * Creates an AI draft pitch and stores it in pitch_drafts.
- * Required: athlete_id
- * Provide either business_id OR business_place_id (+ optional name/category/address), and channel ('email'|'instagram'|'tiktok'|'x').
- */
 export async function generatePitchDraft({
   athlete_id,
   business_id = null,
@@ -219,5 +240,5 @@ export async function generatePitchDraft({
 
   const { data, error } = await supabase.functions.invoke("generate-pitch", { body });
   if (error) throw error;
-  return data; // { ok:true, id, draft, channel, business_id, business_place_id }
+  return data;
 }

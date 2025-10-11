@@ -9,6 +9,8 @@ import {
   getLatestQuizResponse,
   getBusinessMatches,
   processQuiz,
+  subscribeBusinessMatches,
+  mergeMatches,
 } from "../lib/api.js";
 import { supabase } from "../lib/supabaseClient.js";
 import MatchCard from "../components/MatchCard.jsx";
@@ -19,7 +21,7 @@ function loadDemo() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{
 function saveDemo(profile, socials) { try { localStorage.setItem(LS_KEY, JSON.stringify({ profile, socials })); } catch {} }
 
 /* Helpers */
-const dedupeAndLimit = (rows = [], n = 10) => {
+const dedupeAndLimit = (rows = [], n = 20) => {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
@@ -53,7 +55,7 @@ function socialUrl(key, handle) {
 
 export default function Dashboard() {
   const { session } = useAuth?.() ?? { session: null };
-  const userId = session?.user?.id || null;
+  const userId = session?.user?.id || null; // athlete_id
   const isDemo = !userId;
   const seed = loadDemo();
 
@@ -93,6 +95,7 @@ export default function Dashboard() {
           setLastQuiz(null);
           setBuilderDraft(profile);
           setAutoPulled(true);
+          setMatches([]);
           setLoading(false);
           return;
         }
@@ -120,14 +123,29 @@ export default function Dashboard() {
         const q = await getLatestQuizResponse(userId).catch(() => null);
         setLastQuiz(q);
 
-        const rows = await getBusinessMatches(userId, 10).catch(() => []);
-        setMatches(dedupeAndLimit(rows, 10));
+        const rows = await getBusinessMatches(userId, 20).catch(() => []);
+        console.log("[Dashboard] initial matches", rows.length, rows.slice(0, 2));
+        setMatches(dedupeAndLimit(rows, 20));
       } finally {
         setLoading(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isDemo, session?.user?.email]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsub = subscribeBusinessMatches(userId, async () => {
+      try {
+        const rows = await getBusinessMatches(userId, 20);
+        console.log("[Dashboard] realtime matches", rows.length);
+        setMatches(dedupeAndLimit(rows, 20));
+      } catch (e) {
+        console.error("[Dashboard:realtime]", e);
+      }
+    });
+    return () => unsub && unsub();
+  }, [userId]);
 
   const totalFollowers = useMemo(
     () => Object.values(socials).reduce((sum, v) => sum + (Number(v?.followers) || 0), 0),
@@ -188,35 +206,54 @@ export default function Dashboard() {
         return;
       }
 
+      // ✅ location fallback: browser -> quiz row -> null
       const geo = await getGeo();
+      const lat = geo?.lat ?? (typeof latest?.lat === "number" ? latest.lat : null);
+      const lng = geo?.lng ?? (typeof latest?.lng === "number" ? latest.lng : null);
       const radiusMiles = Number((builderDraft || profile)?.preferred_radius_miles || 10);
 
-      const res = await processQuiz(userId, {
+      const resp = await processQuiz(userId, {
         quizResponseId: latest.id,
-        lat: geo?.lat,
-        lng: geo?.lng,
+        lat,
+        lng,
         radiusMiles,
       });
 
-      if (res?.error) {
-        console.warn("[processQuiz]", res.error, res.detail);
-        throw new Error(res.error);
+      if (resp?.error || resp?.ok === false) {
+        console.warn("[processQuiz]", resp?.error, resp?.detail);
+        throw new Error(resp?.error || "process-quiz failed");
       }
 
-      // Pull fresh matches
-      const rows = await getBusinessMatches(userId, 10).catch(async () => {
+      // Show debug in UI if nothing saved
+      if ((resp?.count_saved ?? 0) === 0 && (!resp?.matches || resp.matches.length === 0)) {
+        console.warn("[process-quiz:debug]", resp?.debug || null);
+        setSavedMsg("No candidates from finder. Check console debug.");
+      }
+
+      // optimistic UI from function return
+      if (Array.isArray(resp?.matches) && resp.matches.length) {
+        console.log("[Dashboard] optimistic matches", resp.matches.length);
+        setMatches((prev) => dedupeAndLimit(mergeMatches(prev, resp.matches), 20));
+      }
+
+      // authoritative DB pull
+      const rows = await getBusinessMatches(userId, 20).catch(async () => {
         const { data, error } = await supabase
           .from("business_matches")
           .select("*")
           .eq("athlete_id", userId)
+          .order("match_score", { ascending: false })
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
       });
 
-      setMatches(dedupeAndLimit(rows, 10));
+      console.log("[Dashboard] after processQuiz DB matches", rows.length);
+      setMatches(dedupeAndLimit(rows, 20));
       setTab("My Matches");
-      setSavedMsg("New matches loaded");
+      if ((resp?.count_saved ?? 0) > 0 || rows.length > 0) {
+        setSavedMsg("New matches loaded");
+      }
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
       console.error("[handleGenerateMatches]", e);
@@ -354,8 +391,9 @@ export default function Dashboard() {
               matches.map((m, i) => (
                 <MatchCard
                   key={`${m.business_place_id || m.place_id || m.id || i}-${m.created_at || i}`}
-                  m={normalizeMatch(m)}          // includes identifiers
+                  m={normalizeMatch(m)}
                   athleteId={userId || "demo-user"}
+                  onSelect={(payload) => console.log("[MatchCard:Pitch]", payload)}
                 />
               ))
             )}
@@ -366,21 +404,22 @@ export default function Dashboard() {
   );
 }
 
-/* Normalizer — now preserves identifiers used by MatchCard → generate-pitch */
+/* Normalizer */
 function normalizeMatch(m) {
   return {
     id: m.id || m.place_id || m.business_place_id || `${m.name}|${m.address}`,
     name: m.name || "Business",
     rating: typeof m.business_rating === "number" ? m.business_rating : m.rating,
-    category: m.category || "local",
+    category: m.category || (Array.isArray(m.types) && m.types[0]) || "local",
     address: m.address || m.vicinity || "",
     website: m.website || null,
     reason: m.reason || (typeof m.match_score === "number" ? `Match score ${(m.match_score * 100).toFixed(0)}%` : null),
-
-    // ✅ preserve identifiers so MatchCard can send them to the function
     business_place_id: m.business_place_id ?? m.place_id ?? null,
     place_id: m.place_id ?? null,
     business_id: m.business_id ?? null,
+    match_score: m.match_score ?? null,
+    city: m.city ?? null,
+    types: Array.isArray(m.types) ? m.types : null,
   };
 }
 

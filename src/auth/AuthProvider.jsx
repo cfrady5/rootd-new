@@ -1,8 +1,7 @@
 // src/auth/AuthProvider.jsx
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
-
-const AuthCtx = createContext(null);
+import { AuthContext } from "./AuthContext.js";
 
 export default function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -36,10 +35,5 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const value = { session, loading, setSession, refreshSession };
-  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
-}
-
-// Safe hook (never throws)
-export function useAuth() {
-  return useContext(AuthCtx);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

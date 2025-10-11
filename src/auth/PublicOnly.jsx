@@ -1,6 +1,6 @@
 // src/auth/PublicOnly.jsx
 import { Navigate } from 'react-router-dom';
-import { useAuth } from './AuthProvider.jsx';
+import { useAuth } from "./useAuth.js";
 
 export default function PublicOnly({ children }) {
   const { session, loading } = useAuth();

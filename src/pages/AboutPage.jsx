@@ -63,7 +63,7 @@ const PARTNER_SCHOOLS = [
 ];
 
 export default function AboutPage() {
-  const [schools, setSchools] = useState(PARTNER_SCHOOLS);
+  const schools = PARTNER_SCHOOLS;
   const [q, setQ] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
 

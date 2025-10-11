@@ -5,11 +5,6 @@ import { supabase } from "./supabaseClient.js";
 function compact(obj) {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 }
-async function getAccessToken() {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token || "";
-}
-
 /* ------------------------- Profiles ------------------------- */
 export async function getProfile(userId) {
   const { data, error } = await supabase
@@ -181,7 +176,9 @@ export async function processQuiz(userId, opts = {}) {
       });
       const j = await res.json().catch(() => null);
       console.error("[process-quiz:error-body]", j);
-    } catch {}
+    } catch (fallbackError) {
+      console.warn("[processQuiz:fallback]", fallbackError);
+    }
     throw new Error(`process-quiz ${error.status || ""}: ${JSON.stringify(error)} | body=${JSON.stringify(body)}`);
   }
 

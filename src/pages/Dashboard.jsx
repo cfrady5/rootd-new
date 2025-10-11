@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/useAuth.js";
 import {
   getProfile,
   upsertProfileBasics,
@@ -18,7 +18,13 @@ import MatchCard from "../components/MatchCard.jsx";
 /* Local storage */
 const LS_KEY = "rootd_demo_profile_v3";
 function loadDemo() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; } }
-function saveDemo(profile, socials) { try { localStorage.setItem(LS_KEY, JSON.stringify({ profile, socials })); } catch {} }
+function saveDemo(profile, socials) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ profile, socials }));
+  } catch (err) {
+    console.warn("[Dashboard] failed to persist demo state", err);
+  }
+}
 
 /* Helpers */
 const dedupeAndLimit = (rows = [], n = 20) => {
@@ -77,7 +83,6 @@ export default function Dashboard() {
   });
 
   const [matches, setMatches] = useState([]);
-  const [lastQuiz, setLastQuiz] = useState(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
@@ -92,7 +97,6 @@ export default function Dashboard() {
       setLoading(true);
       try {
         if (isDemo) {
-          setLastQuiz(null);
           setBuilderDraft(profile);
           setAutoPulled(true);
           setMatches([]);
@@ -119,9 +123,6 @@ export default function Dashboard() {
         setBuilderDraft(nextProfile);
         setAutoPulled(true);
         saveDemo(nextProfile, nextSocials);
-
-        const q = await getLatestQuizResponse(userId).catch(() => null);
-        setLastQuiz(q);
 
         const rows = await getBusinessMatches(userId, 20).catch(() => []);
         console.log("[Dashboard] initial matches", rows.length, rows.slice(0, 2));

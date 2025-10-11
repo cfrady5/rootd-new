@@ -9,7 +9,7 @@ import AuthPage from "./pages/AuthPage.jsx";
 import DemoPage from "./pages/DemoPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import DirectorPortal from "./pages/DirectorPortal.jsx";
-import { useAuth } from "./auth/AuthProvider.jsx";
+import { useAuth } from "./auth/useAuth.js";
 
 function ProtectedRoute({ children }) {
   const auth = useAuth(); // may be undefined while provider mounts

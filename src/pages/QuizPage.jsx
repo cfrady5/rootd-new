@@ -1,13 +1,16 @@
-// src/pages/QuizPage.jsx
+// /src/pages/QuizPage.jsx  (updated to support multiNumber + ranked)
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { quizQuestions } from "../data/quizQuestions.js";
+import quizQuestions, { quizQuestions as namedQuiz } from "../data/quizQuestions.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { insertQuizResponse } from "../lib/api.js";
 
 const green = "#0FA958";
 const hair = "#E7EEF3";
 const muted = "#5E6B77";
+
+// prefer default export, but keep backward compat
+const QUESTIONS = quizQuestions || namedQuiz;
 
 function Progress({ current, total }) {
   const pct = Math.round(((current + 1) / total) * 100);
@@ -111,7 +114,7 @@ function CheckPill({ checked, onToggle, children }) {
 export default function QuizPage() {
   const navigate = useNavigate();
   const { session } = (useAuth?.() ?? {});
-  const total = quizQuestions.length;
+  const total = QUESTIONS.length;
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -125,7 +128,7 @@ export default function QuizPage() {
     }
   }, [session, navigate]);
 
-  const q = useMemo(() => quizQuestions[step], [step]);
+  const q = useMemo(() => QUESTIONS[step], [step]);
 
   const setValue = (val) =>
     setAnswers((prev) => ({
@@ -133,13 +136,34 @@ export default function QuizPage() {
       [q.id]: val,
     }));
 
+  // ranked helpers
+  const toggleRanked = (opt) => {
+    const v = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+    if (v.includes(opt)) {
+      setValue(v.filter((x) => x !== opt));
+    } else {
+      const max = q.max || 3;
+      setValue(v.length >= max ? [...v.slice(1), opt] : [...v, opt]);
+    }
+  };
+  const clearRanked = () => setValue([]);
+
   const canContinue = useMemo(() => {
     if (!q) return false;
     const v = answers[q.id];
+
     if (q.type === "text") return Boolean(String(v ?? "").trim());
     if (q.type === "single") return !!v;
     if (q.type === "multiple") return Array.isArray(v) && v.length > 0;
     if (q.type === "slider") return typeof v === "number";
+    if (q.type === "multiNumber") {
+      const obj = v || {};
+      return Object.values(obj).some((n) => Number(n) > 0);
+    }
+    if (q.type === "ranked") {
+      const max = q.max || 3;
+      return Array.isArray(v) && v.length > 0 && v.length <= max;
+    }
     return false;
   }, [answers, q]);
 
@@ -150,12 +174,21 @@ export default function QuizPage() {
     setSaving(true);
     setError("");
     try {
-      for (const item of quizQuestions) {
+      for (const item of QUESTIONS) {
         const v = answers[item.id];
         if (item.type === "text" && !(v && String(v).trim())) throw new Error(`Please answer question ${item.id}.`);
         if (item.type === "single" && !v) throw new Error(`Please answer question ${item.id}.`);
         if (item.type === "multiple" && (!Array.isArray(v) || v.length === 0)) throw new Error(`Please answer question ${item.id}.`);
         if (item.type === "slider" && typeof v !== "number") throw new Error(`Please answer question ${item.id}.`);
+        if (item.type === "multiNumber") {
+          const obj = v || {};
+          if (!Object.values(obj).some((n) => Number(n) > 0)) throw new Error(`Please enter at least one follower count for question ${item.id}.`);
+        }
+        if (item.type === "ranked") {
+          const arr = Array.isArray(v) ? v : [];
+          if (arr.length === 0) throw new Error(`Please choose at least one option for question ${item.id}.`);
+          if (item.max && arr.length > item.max) throw new Error(`Select up to ${item.max} items for question ${item.id}.`);
+        }
       }
       if (!session?.user?.id) throw new Error("You must be signed in to submit the quiz.");
 
@@ -204,7 +237,7 @@ export default function QuizPage() {
       const min = Number.isFinite(q.min) ? q.min : 0;
       const max = Number.isFinite(q.max) ? q.max : 250;
       const step = Number.isFinite(q.step) ? q.step : 5;
-      const unit = q.unit || "mi";
+      const unit = q.unit || "";
       const v = typeof answers[q.id] === "number" ? answers[q.id] : min;
       return (
         <div style={{ marginTop: 16 }}>
@@ -218,11 +251,63 @@ export default function QuizPage() {
               onChange={(e) => setValue(Number(e.target.value))}
               style={{ width: "100%" }}
             />
-            <span style={{ minWidth: 64, textAlign: "right" }}>{v} {unit}</span>
+            <span style={{ minWidth: 64, textAlign: "right" }}>{v}{unit ? ` ${unit}` : ""}</span>
           </div>
           <div className="subtle" style={{ marginTop: 6 }}>
-            Range: {min}–{max} {unit}, step {step}
+            Range: {min}–{max}{unit ? ` ${unit}` : ""}, step {step}
           </div>
+        </div>
+      );
+    }
+
+    if (q.type === "multiNumber") {
+      const val = answers[q.id] || {};
+      return (
+        <div className="grid gap-3" style={{ marginTop: 8 }}>
+          {q.fields.map((f) => (
+            <label key={f.key} className="flex items-center gap-2" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="w-32" style={{ width: 140, fontWeight: 800 }}>{f.label}</span>
+              <input
+                type="number"
+                min="0"
+                value={val[f.key] ?? ""}
+                onChange={(e) =>
+                  setAnswers((a) => ({
+                    ...a,
+                    [q.id]: { ...(a[q.id] || {}), [f.key]: Number(e.target.value) || 0 }
+                  }))
+                }
+                className="input"
+                style={{ border: `1px solid ${hair}`, borderRadius: 10, padding: "8px 10px", width: 180 }}
+              />
+            </label>
+          ))}
+          <div className="subtle">Enter at least one platform if you use social media.</div>
+        </div>
+      );
+    }
+
+    if (q.type === "ranked") {
+      const v = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+      return (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            {q.options.map((opt) => {
+              const idx = v.indexOf(opt);
+              const active = idx >= 0;
+              return (
+                <Pill key={opt} active={active} onClick={() => toggleRanked(opt)}>
+                  {active ? `${idx + 1}. ${opt}` : opt}
+                </Pill>
+              );
+            })}
+          </div>
+          <button type="button" className="btn" onClick={clearRanked}>Clear selection</button>
+          {q.max ? (
+            <div className="subtle" style={{ marginTop: 6 }}>
+              Select up to {q.max}. Click again to remove. Order = priority.
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -233,7 +318,7 @@ export default function QuizPage() {
         <textarea
           className="input"
           rows={5}
-          placeholder="Type your answer…"
+          placeholder={q.placeholder || "Type your answer…"}
           value={answers[q.id] || ""}
           onChange={(e) => setValue(e.target.value)}
           style={{ resize: "vertical" }}

@@ -2,41 +2,86 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 export default function MatchCard({ m, athleteId }) {
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [lastError, setLastError] = useState(null);
 
   async function handleGeneratePitch(channel = "email") {
     setLoading(true);
+    setLastError(null);
     try {
       const payload = {
         athlete_id: athleteId,
-        business_id: m.business_id || m.businessId || null,
-        business_place_id: m.business_place_id || m.place_id || null,
-        name: m.name,
-        category: m.category,
-        city: m.city,
-        address: m.address,
-        channel,
+        business_id: m?.business_id || m?.businessId || null,
+        business_place_id: m?.business_place_id || m?.place_id || m?.placeId || null,
+        name: m?.name || "Local Business",
+        category: m?.category || (Array.isArray(m?.types) ? m.types[0] : "local"),
+        city: m?.city || null,
+        address: m?.address || m?.vicinity || null,
+        channel, // 'email' | 'instagram' | 'tiktok' | 'x'
       };
 
-      const { data, error } = await supabase.functions.invoke("generate-pitch", {
-        body: payload,
+      if (!payload.athlete_id) {
+        const msg = "No athlete_id found. Are you signed in?";
+        setLastError(msg);
+        alert(msg);
+        return;
+      }
+      if (!payload.business_id && !payload.business_place_id) {
+        const msg = "This match is missing a business_place_id (or business_id).";
+        setLastError(msg);
+        alert(msg);
+        return;
+      }
+
+      // Use a direct fetch so we ALWAYS see the server's error body.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-pitch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (error) {
-        alert(`⚠️ ${error.message}`);
-        return;
-      }
-      if (!data?.ok) {
-        console.error("[generate-pitch] failed:", data);
+      if (!resp.ok) {
+        const ct = resp.headers.get("content-type") || "";
+        const body = ct.includes("application/json") ? await resp.json() : await resp.text();
+        const msg =
+          (typeof body === "string" && body) ||
+          body?.error ||
+          body?.message ||
+          JSON.stringify(body);
+        console.error("[generate-pitch] HTTP", resp.status, msg, { payload });
+        setLastError(msg);
+        alert(msg);
         return;
       }
 
-      // Show generated text directly, no alert.
+      const data = await resp.json();
+      if (!data?.ok) {
+        const msg = data?.error || "AI Pitch failed.";
+        console.error("[generate-pitch] non-ok", data);
+        setLastError(msg);
+        alert(msg);
+        return;
+      }
+
       setDraft(data?.draft || "");
     } catch (e) {
       console.error("[AI Pitch]", e);
+      const msg = e?.message || "Could not generate AI Pitch.";
+      setLastError(msg);
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -54,8 +99,8 @@ export default function MatchCard({ m, athleteId }) {
     >
       <div style={{ display: "grid", gap: 4 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <h4 style={{ margin: 0, fontSize: 16 }}>{m.name}</h4>
-          {typeof m.rating === "number" && (
+          <h4 style={{ margin: 0, fontSize: 16 }}>{m?.name || "Business"}</h4>
+          {typeof m?.rating === "number" && (
             <span className="subtle" style={{ color: "#0D1113" }}>
               ⭐ {m.rating.toFixed(1)}
             </span>
@@ -63,16 +108,16 @@ export default function MatchCard({ m, athleteId }) {
         </div>
 
         <div className="subtle" style={{ color: "#5E6B77" }}>
-          {m.category}
+          {m?.category || "local"}
         </div>
 
-        {m.address && (
+        {(m?.address || m?.vicinity) && (
           <div className="subtle" style={{ color: "#5E6B77" }}>
-            {m.address}
+            {m.address || m.vicinity}
           </div>
         )}
 
-        {m.website && (
+        {m?.website && (
           <div style={{ marginTop: 6 }}>
             <a
               href={m.website}
@@ -90,7 +135,7 @@ export default function MatchCard({ m, athleteId }) {
           </div>
         )}
 
-        {m.reason && (
+        {m?.reason && (
           <div
             style={{
               marginTop: 6,
@@ -116,8 +161,7 @@ export default function MatchCard({ m, athleteId }) {
             flexWrap: "wrap",
           }}
         >
-          {/* Connect now links directly to business website */}
-          {m.website && (
+          {m?.website && (
             <a
               href={m.website}
               target="_blank"
@@ -154,7 +198,23 @@ export default function MatchCard({ m, athleteId }) {
           </button>
         </div>
 
-        {/* Render the generated pitch inline */}
+        {lastError && (
+          <div
+            style={{
+              marginTop: 10,
+              background: "#FEF2F2",
+              border: "1px solid #FECACA",
+              padding: 10,
+              borderRadius: 10,
+              whiteSpace: "pre-wrap",
+              fontSize: 12,
+              color: "#991B1B",
+            }}
+          >
+            <strong>Pitch error:</strong> {lastError}
+          </div>
+        )}
+
         {draft && (
           <div
             style={{

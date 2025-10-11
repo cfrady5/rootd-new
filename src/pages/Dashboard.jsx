@@ -23,7 +23,7 @@ const dedupeAndLimit = (rows = [], n = 10) => {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
-    const k = r.place_id || r.id || `${r.name}|${r.address}`;
+    const k = r.business_place_id || r.place_id || r.id || `${r.name}|${r.address}`;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(r);
@@ -80,9 +80,10 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("Profile"); // Merged "Overview" + "My Profile" -> "Profile"
+  const [tab, setTab] = useState("Profile");
   const [builderDraft, setBuilderDraft] = useState(null);
   const [autoPulled, setAutoPulled] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -179,25 +180,50 @@ export default function Dashboard() {
 
   async function handleGenerateMatches() {
     if (!userId) return;
-    const latest = await getLatestQuizResponse(userId).catch(() => null);
-    if (!latest?.id) {
-      alert("Complete the quiz first.");
-      return;
+    setGenLoading(true);
+    try {
+      const latest = await getLatestQuizResponse(userId).catch(() => null);
+      if (!latest?.id) {
+        alert("Complete the quiz first.");
+        return;
+      }
+
+      const geo = await getGeo();
+      const radiusMiles = Number((builderDraft || profile)?.preferred_radius_miles || 10);
+
+      const res = await processQuiz(userId, {
+        quizResponseId: latest.id,
+        lat: geo?.lat,
+        lng: geo?.lng,
+        radiusMiles,
+      });
+
+      if (res?.error) {
+        console.warn("[processQuiz]", res.error, res.detail);
+        throw new Error(res.error);
+      }
+
+      // Pull fresh matches
+      const rows = await getBusinessMatches(userId, 10).catch(async () => {
+        const { data, error } = await supabase
+          .from("business_matches")
+          .select("*")
+          .eq("athlete_id", userId)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      });
+
+      setMatches(dedupeAndLimit(rows, 10));
+      setTab("My Matches");
+      setSavedMsg("New matches loaded");
+      setTimeout(() => setSavedMsg(""), 2500);
+    } catch (e) {
+      console.error("[handleGenerateMatches]", e);
+      alert("Could not generate matches. Check Edge Function logs.");
+    } finally {
+      setGenLoading(false);
     }
-
-    const geo = await getGeo();
-    const radiusMiles = Number((builderDraft || profile)?.preferred_radius_miles || 10);
-
-    await processQuiz(userId, {
-      quizResponseId: latest.id,
-      lat: geo?.lat,
-      lng: geo?.lng,
-      radiusMiles,
-    }).catch((e) => console.warn("[processQuiz]", e));
-
-    const rows = await getBusinessMatches(userId, 10).catch(() => []);
-    setMatches(dedupeAndLimit(rows, 10));
-    setTab("My Matches");
   }
 
   if (loading) {
@@ -260,14 +286,12 @@ export default function Dashboard() {
 
       {tab === "Profile" && (
         <>
-          {/* Stats (from former Overview) */}
           <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 16 }}>
             <StatCard label="Active Deals" value="2" />
             <StatCard label="Compliance" value="All Clear" />
             <StatCard label="Total Followers" value={totalFollowers.toLocaleString()} />
           </section>
 
-          {/* Read-only profile (from former My Profile) OR editable */}
           <section style={{ ...surface, padding: 20, marginTop: 16 }}>
             {!editing ? (
               <>
@@ -316,7 +340,9 @@ export default function Dashboard() {
         <section style={{ ...surface, padding: 20, marginTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={{ margin: 0, color: "#0f172a" }}>My Matches</h3>
-            <button style={pill} onClick={handleGenerateMatches}>Generate new matches</button>
+            <button style={{ ...pill, opacity: genLoading ? 0.7 : 1 }} onClick={handleGenerateMatches} disabled={genLoading}>
+              {genLoading ? "Generating…" : "Generate new matches"}
+            </button>
           </div>
 
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
@@ -326,7 +352,11 @@ export default function Dashboard() {
               </div>
             ) : (
               matches.map((m, i) => (
-                <MatchCard key={`${m.place_id || m.id || i}-${m.created_at || i}`} m={normalizeMatch(m)} athleteId={userId || "demo-user"} />
+                <MatchCard
+                  key={`${m.business_place_id || m.place_id || m.id || i}-${m.created_at || i}`}
+                  m={normalizeMatch(m)}          // includes identifiers
+                  athleteId={userId || "demo-user"}
+                />
               ))
             )}
           </div>
@@ -336,16 +366,21 @@ export default function Dashboard() {
   );
 }
 
-/* Normalizer so MatchCard fields are present */
+/* Normalizer — now preserves identifiers used by MatchCard → generate-pitch */
 function normalizeMatch(m) {
   return {
-    id: m.id || m.place_id || `${m.name}|${m.address}`,
+    id: m.id || m.place_id || m.business_place_id || `${m.name}|${m.address}`,
     name: m.name || "Business",
     rating: typeof m.business_rating === "number" ? m.business_rating : m.rating,
     category: m.category || "local",
     address: m.address || m.vicinity || "",
     website: m.website || null,
     reason: m.reason || (typeof m.match_score === "number" ? `Match score ${(m.match_score * 100).toFixed(0)}%` : null),
+
+    // ✅ preserve identifiers so MatchCard can send them to the function
+    business_place_id: m.business_place_id ?? m.place_id ?? null,
+    place_id: m.place_id ?? null,
+    business_id: m.business_id ?? null,
   };
 }
 

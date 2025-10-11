@@ -1,304 +1,418 @@
 // supabase/functions/process-quiz/index.ts
-// Uses PROJECT_SUPABASE_URL / PROJECT_SUPABASE_SERVICE_ROLE_KEY
-// Does NOT select lat/lng (or preferred_radius_miles) from quiz_responses.
+// deno-lint-ignore-file no-explicit-any no-unversioned-import
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+type Json = Record<string, any> | any[] | string | number | boolean | null;
 
-type UUID = string & { __brand: 'uuid' }
-
-type RequestPayload = {
-  athleteId?: string | null
-  quizResponseId?: string | null
-  lat?: number | null
-  lng?: number | null
-  radiusMiles?: number | null
+interface QuizRow {
+  id: string;
+  athlete_id?: string | null;
+  user_id?: string | null; // legacy
+  created_at?: string;
+  response: Json | null;
 }
 
-type QuizResponseRow = {
-  id: string
-  user_id: string
-  answers: unknown
-  created_at: string
+interface BusinessMatchInput {
+  place_id?: string | null;
+  business_place_id?: string | null;
+  name?: string | null;
+  category?: string | null;
+  address?: string | null;
+  city?: string | null;
+  website?: string | null;
+  rating?: number | null;
+  types?: string[] | null;
 }
 
-type MatchInsert = {
-  user_id: UUID
-  business_place_id: string
-  name?: string | null
-  category?: string | null
-  address?: string | null
-  website?: string | null
-  phone?: string | null
-  reason?: string | null
+interface BusinessMatchRow extends Required<Pick<BusinessMatchInput, "name">> {
+  athlete_id: string;
+  business_place_id: string | null;
+  category: string | null;
+  address: string | null;
+  city: string | null;
+  website: string | null;
+  business_rating: number | null;
+  types: string[] | null;
+  match_score: number | null;
+  reason: string | null;
 }
 
-type GoogleNearbyResult = {
-  place_id: string
-  name?: string
-  types?: string[]
-  business_status?: string
-  vicinity?: string
-}
+const CORS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+  Vary: "Origin",
+};
 
-type GoogleDetailsResult = {
-  place_id?: string
-  name?: string
-  website?: string
-  formatted_phone_number?: string
-  international_phone_number?: string
-  url?: string
-  business_status?: string
-}
+const SUPABASE_URL =
+  Deno.env.get("PROJECT_SUPABASE_URL") ||
+  Deno.env.get("SUPABASE_URL") ||
+  "";
+const SERVICE_ROLE =
+  Deno.env.get("PROJECT_SUPABASE_SERVICE_ROLE_KEY") ||
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+  "";
+const OPENAI = Deno.env.get("OPENAI_API_KEY") || ""; // optional (scoring/explanations)
 
-type OpenAIResp = {
-  choices?: { message?: { content?: string } }[]
-  error?: { message?: string }
+function r(body: unknown, init: ResponseInit = {}) {
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    ...CORS,
+    ...(init.headers ?? {}),
+  });
+  return new Response(JSON.stringify(body), { ...init, headers });
 }
+const ok = (data: unknown) => r({ ok: true, ...((typeof data === "object" && data) || { data }) });
+const fail = (error: string, detail?: unknown, status = 400) =>
+  r({ ok: false, error, detail }, { status });
 
-/* ---------- Env & CORS ---------- */
-const SUPABASE_URL = Deno.env.get('PROJECT_SUPABASE_URL')!
-const SERVICE_ROLE = Deno.env.get('PROJECT_SUPABASE_SERVICE_ROLE_KEY')!
-const GOOGLE_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY') || ''
-const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
+/* ----------------------------- helpers ----------------------------- */
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, apikey, content-type, x-client-info, x-application-name, x-requested-with, accept, origin, referer',
-  Vary: 'Origin',
+function str(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  return s.length ? s : undefined;
 }
-
-function json(body: unknown, init: ResponseInit = {}) {
-  const headers = new Headers({ 'Content-Type': 'application/json', ...CORS_HEADERS })
-  return new Response(JSON.stringify(body), { ...init, headers })
-}
-function ok(payload: unknown) {
-  const obj = (typeof payload === 'object' && payload !== null) ? (payload as Record<string, unknown>) : { payload }
-  return json({ ok: true, ...obj })
-}
-function fail(error: string, detail?: unknown, status = 400) {
-  return json({ ok: false, error, detail }, { status })
-}
-
-/* ---------- Utils ---------- */
-function milesToMeters(mi: number) { return Math.max(100, Math.round(mi * 1609.344)) }
-function uniqBy<T>(arr: T[], key: (t: T) => string) {
-  const out: T[] = []; const seen = new Set<string>()
-  for (const item of arr) { const k = key(item); if (seen.has(k)) continue; seen.add(k); out.push(item) }
-  return out
-}
-function toReasonFromTypes(types?: string[]) {
-  if (!types?.length) return 'Nearby match'
-  const readable = types.slice(0, 2).map((t) => t.replace(/_/g, ' ')).join(' / ')
-  return `Nearby: ${readable}`
-}
-function normPhone(p?: string | null) { if (!p) return null; const d = p.replace(/[^\d+]/g, ''); return d || null }
-
-/* ---------- Google ---------- */
-async function fetchNearby(lat: number, lng: number, radiusMeters: number) {
-  const url =
-    `https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=${GOOGLE_KEY}` +
-    `&location=${lat},${lng}&radius=${radiusMeters}&opennow=false&rankby=prominence`
-  const res = await fetch(url)
-  const jsonData = await res.json() as { status?: string; results?: GoogleNearbyResult[]; error_message?: string }
-  if (!res.ok || (jsonData.status && jsonData.status !== 'OK')) {
-    throw new Error(jsonData.error_message || jsonData.status || 'Google Nearby error')
-  }
-  return jsonData.results || []
-}
-
-async function fetchPlaceDetails(placeId: string) {
-  const fields = [
-    'place_id','name','website','formatted_phone_number','international_phone_number','url','business_status',
-  ].join(',')
-  const url =
-    `https://maps.googleapis.com/maps/api/place/details/json?key=${GOOGLE_KEY}` +
-    `&place_id=${encodeURIComponent(placeId)}&fields=${encodeURIComponent(fields)}`
-  const res = await fetch(url)
-  const jsonData = await res.json() as { status?: string; result?: GoogleDetailsResult; error_message?: string }
-  if (!res.ok || (jsonData.status && jsonData.status !== 'OK')) {
-    throw new Error(jsonData.error_message || jsonData.status || 'Google Details error')
-  }
-  return jsonData.result || {}
-}
-
-/* ---------- Optional Persona (best-effort) ---------- */
-async function generatePersona(answers: unknown) {
-  if (!OPENAI_KEY) {
-    return { summary: 'Student-athlete seeking local NIL partnerships.', traits: [] as string[], interests: [] as string[], categories: [] as string[] }
-  }
-  const sys = 'You analyze a student-athlete’s quiz answers to generate a concise NIL persona: summary (<=60 words), 5 traits, 5 interests, and 5 suggested local business categories.'
-  const user = `Quiz Answers (JSON):\n${JSON.stringify(answers)}\n\nReturn JSON with keys: summary, traits[], interests[], categories[]`
-
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
-      response_format: { type: 'json_object' },
-      temperature: 0.5,
-    }),
-  })
-  const data = await resp.json() as OpenAIResp
-  if (!resp.ok || data?.error) throw new Error(data?.error?.message || 'OpenAI error')
-  const content = data.choices?.[0]?.message?.content || '{}'
+function asArr<T = unknown>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  if (v == null) return [];
   try {
-    const parsed = JSON.parse(content) as { summary?: string; traits?: string[]; interests?: string[]; categories?: string[] }
-    return {
-      summary: parsed.summary || 'Student-athlete seeking local NIL partnerships.',
-      traits: parsed.traits || [],
-      interests: parsed.interests || [],
-      categories: parsed.categories || [],
+    if (typeof v === "string") {
+      const j = JSON.parse(v);
+      return Array.isArray(j) ? j : [];
     }
-  } catch {
-    return { summary: 'Student-athlete seeking local NIL partnerships.', traits: [], interests: [], categories: [] }
-  }
+  } catch {}
+  return [];
+}
+function num(v: unknown): number | undefined {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+function uniq<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr.filter((x) => x != null)));
 }
 
-async function tryUpsertPersona(sb: SupabaseClient, userId: UUID, persona: { summary: string; traits: string[]; interests: string[]; categories: string[] }) {
-  try {
-    const { error } = await sb.from('athlete_profiles').upsert({
-      id: userId,
-      persona_summary: persona.summary,
-      traits: persona.traits,
-      interests: persona.interests,
-      categories: persona.categories,
-    }, { onConflict: 'id' })
-    if (error && !/relation .* does not exist/i.test(error.message)) {
-      console.warn('[process-quiz] athlete_profiles upsert warning:', error.message)
-    }
-  } catch (e) {
-    console.warn('[process-quiz] athlete_profiles upsert skipped:', (e as Error)?.message)
-  }
+/** NEW QUIZ SCHEMA NORMALIZER
+ * Handles both old and new quiz payloads.
+ * We try a series of likely paths and merge.
+ */
+function normalizeQuiz(response: any) {
+  // flat helpers
+  const pick = (obj: any, ...paths: string[]) =>
+    paths
+      .map((p) => p.split(".").reduce((acc, k) => (acc ? acc[k] : undefined), obj))
+      .find((x) => x !== undefined);
+
+  // Common fields in new schema
+  const prefs = pick(
+    response,
+    "preferences",
+    "answers.preferences",
+    "data.preferences",
+    "quiz.preferences"
+  ) || {};
+
+  const location = pick(
+    response,
+    "location",
+    "answers.location",
+    "meta.location",
+    "preferences.location"
+  ) || {};
+
+  const categories =
+    asArr<string>(
+      pick(
+        response,
+        "preferences.categories",
+        "preferences.categories_selected",
+        "answers.categories",
+        "answers.selected_categories",
+        "data.categories"
+      )
+    ) || [];
+
+  const industries =
+    asArr<string>(
+      pick(
+        response,
+        "preferences.industries",
+        "answers.industries",
+        "data.industries"
+      )
+    ) || [];
+
+  const keywords =
+    asArr<string>(
+      pick(
+        response,
+        "preferences.keywords",
+        "answers.keywords",
+        "data.keywords",
+        "quiz.keywords"
+      )
+    ) || [];
+
+  const budget = num(
+    pick(
+      response,
+      "preferences.budget",
+      "answers.budget.min",
+      "answers.budget",
+      "data.budget"
+    )
+  );
+
+  const radius =
+    num(
+      pick(
+        response,
+        "preferences.radius_miles",
+        "preferences.radius",
+        "answers.radius_miles",
+        "answers.radius",
+        "data.radius_miles"
+      )
+    ) ?? 10;
+
+  const school = str(
+    pick(
+      response,
+      "athlete.school",
+      "profile.school",
+      "answers.school",
+      "user.school"
+    )
+  );
+
+  const sport = str(
+    pick(
+      response,
+      "athlete.sport",
+      "profile.sport",
+      "answers.sport",
+      "user.sport"
+    )
+  );
+
+  const persona = str(
+    pick(
+      response,
+      "athlete.persona_summary",
+      "answers.persona_summary",
+      "profile.persona_summary"
+    )
+  );
+
+  // location
+  const lat = num(location?.lat ?? location?.latitude);
+  const lng = num(location?.lng ?? location?.longitude);
+  const city = str(location?.city || location?.locality);
+
+  // Merge & dedupe topic signals
+  const topicSignals = uniq([
+    ...categories,
+    ...industries,
+    ...keywords,
+    str(prefs?.niche),
+    str(prefs?.primary_category),
+  ].filter(Boolean) as string[]);
+
+  return {
+    categories,
+    industries,
+    keywords,
+    topics: topicSignals,
+    budget,
+    radiusMiles: radius,
+    lat,
+    lng,
+    city,
+    school,
+    sport,
+    persona,
+  };
 }
 
-/* ---------- Handler ---------- */
+/** Score a candidate business vs. quiz prefs (lightweight, local) */
+function scoreBusiness(biz: BusinessMatchInput, prefs: ReturnType<typeof normalizeQuiz>) {
+  let score = 0;
+
+  const cat = (biz.category || "").toLowerCase();
+  const name = (biz.name || "").toLowerCase();
+  const types = (biz.types || []).map((t) => (t || "").toLowerCase());
+  const topicSet = new Set(prefs.topics.map((t) => t.toLowerCase()));
+
+  if (cat && topicSet.has(cat)) score += 0.35;
+  if (types.some((t) => topicSet.has(t))) score += 0.25;
+  if ([...topicSet].some((t) => name.includes(t))) score += 0.15;
+
+  // slight boost for city match
+  if (prefs.city && biz?.address && biz.address.toLowerCase().includes(prefs.city.toLowerCase())) {
+    score += 0.1;
+  }
+
+  // rating signal
+  if (typeof biz.rating === "number") {
+    score += Math.min(0.15, Math.max(0, (biz.rating - 3.5) * 0.05)); // 4.5 ~ +0.05, cap 0.15
+  }
+
+  return Math.max(0, Math.min(1, score));
+}
+
+/* ------------------------------- main ------------------------------- */
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: new Headers(CORS_HEADERS) })
-  if (req.method !== 'POST') return fail('Method not allowed', undefined, 405)
-
-  if (!SUPABASE_URL || !SERVICE_ROLE) return fail('Missing Supabase env')
-  if (!GOOGLE_KEY) return fail('Missing GOOGLE_MAPS_API_KEY')
-
-  let payload: RequestPayload
-  try { payload = await req.json() } catch { return fail('Invalid JSON body') }
-
-  const userId = (payload.athleteId || '').trim() as UUID
-  const quizResponseId = (payload.quizResponseId || '').trim() || null
-  const centerLat = typeof payload.lat === 'number' ? payload.lat : null
-  const centerLng = typeof payload.lng === 'number' ? payload.lng : null
-  const radiusMiles = typeof payload.radiusMiles === 'number' && payload.radiusMiles ? payload.radiusMiles : 10
-
-  if (!userId) return fail('athleteId (user id) is required')
-
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
-
-  // Load quiz response (only stable columns)
-  let quizRow: QuizResponseRow | null = null
-  if (quizResponseId) {
-    const { data, error } = await supabase
-      .from('quiz_responses')
-      .select('id, user_id, answers, created_at')
-      .eq('id', quizResponseId)
-      .maybeSingle<QuizResponseRow>()
-    if (error) return fail('Failed to load quiz response (by id)', error.message)
-    if (!data) return fail('Quiz response not found')
-    quizRow = data
-  } else {
-    const { data, error } = await supabase
-      .from('quiz_responses')
-      .select('id, user_id, answers, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<QuizResponseRow>()
-    if (error) return fail('Failed to load latest quiz response', error.message)
-    if (!data) return fail('No quiz responses found for user')
-    quizRow = data
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: new Headers(CORS) });
   }
+  if (req.method !== "POST") return fail("Method not allowed", undefined, 405);
 
-  // Persona (best-effort)
+  if (!SUPABASE_URL || !SERVICE_ROLE) return fail("Missing Supabase env");
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  let body: {
+    quizResponseId?: string;
+    athleteId?: string;
+    lat?: number;
+    lng?: number;
+    radiusMiles?: number;
+  };
   try {
-    const persona = await generatePersona(quizRow.answers)
-    await tryUpsertPersona(supabase, userId, persona)
+    body = await req.json();
+  } catch {
+    return fail("Invalid JSON body");
+  }
+
+  // Prefer explicit athleteId from body; else derive from auth (if present)
+  const auth = req.headers.get("authorization") || "";
+  const jwt = auth.startsWith("Bearer ") ? auth.slice(7) : undefined;
+  let athleteId = body.athleteId;
+  if (!athleteId && jwt) {
+    try {
+      // decode WITHOUT verifying to read sub (Edge runtime has no jose by default)
+      const payload = JSON.parse(atob(jwt.split(".")[1] || ""));
+      athleteId = payload?.sub;
+    } catch {}
+  }
+
+  // Load quiz row
+  if (!body?.quizResponseId) return fail("quizResponseId is required");
+  const { data: quiz, error: qErr } = await supabase
+    .from("quiz_responses")
+    .select("id, athlete_id, user_id, response, created_at")
+    .eq("id", body.quizResponseId)
+    .maybeSingle<QuizRow>();
+  if (qErr) return fail("quiz_responses lookup failed", qErr.message);
+  if (!quiz) return fail("quiz response not found");
+
+  // Resolve athlete id (prefer quiz row)
+  const resolvedAthleteId =
+    quiz.athlete_id ||
+    quiz.user_id || // legacy
+    athleteId;
+  if (!resolvedAthleteId) return fail("athlete_id missing (supply athleteId or ensure quiz.athlete_id)");
+
+  // Normalize quiz (NEW SCHEMA SUPPORT)
+  const prefs = normalizeQuiz(quiz.response || {});
+  const lat = body.lat ?? prefs.lat;
+  const lng = body.lng ?? prefs.lng;
+  const radiusMiles = body.radiusMiles ?? prefs.radiusMiles ?? 10;
+
+  // Call internal finder (your existing function) to get candidates
+  // It should accept a flexible payload; we pass topics/categories/industries and location.
+  const finderUrl = `${SUPABASE_URL}/functions/v1/find-businesses`;
+  const finderPayload = {
+    lat,
+    lng,
+    radiusMiles,
+    topics: prefs.topics,
+    categories: prefs.categories,
+    industries: prefs.industries,
+    keywords: prefs.keywords,
+    city: prefs.city,
+    school: prefs.school,
+    sport: prefs.sport,
+  };
+
+  let candidates: BusinessMatchInput[] = [];
+  try {
+    const resp = await fetch(finderUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SERVICE_ROLE,
+        Authorization: `Bearer ${SERVICE_ROLE}`,
+      },
+      body: JSON.stringify(finderPayload),
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      return fail("find-businesses error", { status: resp.status, body: text });
+    }
+    const j = await resp.json();
+    const arr = Array.isArray(j?.results) ? j.results : Array.isArray(j) ? j : [];
+    candidates = arr as BusinessMatchInput[];
   } catch (e) {
-    console.warn('[process-quiz] persona generation failed:', (e as Error)?.message)
+    // If the finder is unavailable, proceed with empty -> nothing to insert
+    console.warn("find-businesses request failed:", (e as Error)?.message);
+    candidates = [];
   }
 
-  // Require client-provided geolocation
-  if (centerLat == null || centerLng == null) {
-    return ok({ matches_inserted: 0, note: 'No geolocation provided; skipping nearby search.' })
-  }
-  const radius = milesToMeters(radiusMiles)
-
-  // Nearby search
-  let nearby: GoogleNearbyResult[] = []
-  try { nearby = await fetchNearby(centerLat, centerLng, radius) }
-  catch (e) { return fail('Google Nearby failed', (e as Error)?.message) }
-
-  // Details + prepare inserts
-  const inserts: MatchInsert[] = []
-  for (const r of nearby.slice(0, 30)) {
-    if (r.business_status && r.business_status.toUpperCase().includes('CLOSED')) continue
-
-    let details: GoogleDetailsResult = {}
-    try { details = await fetchPlaceDetails(r.place_id) }
-    catch (e) { console.warn('[process-quiz] details failed for', r.place_id, (e as Error)?.message) }
-
-    const website = (details.website || null) as string | null
-    const phone = normPhone(details.formatted_phone_number || details.international_phone_number || null)
-
-    inserts.push({
-      user_id: userId,
-      business_place_id: r.place_id,
-      name: r.name || details.name || null,
-      category: (r.types && r.types[0]) || null,
-      address: r.vicinity || null,
-      website,
-      phone,
-      reason: toReasonFromTypes(r.types),
-    })
-  }
-
-  const rows = uniqBy(inserts, (x) => x.business_place_id)
-
-  // Dedup against existing business_matches
-  const toInsert: MatchInsert[] = []
-  if (rows.length) {
-    const placeIds = rows.map((r) => r.business_place_id)
-    const { data: existing, error: existErr } = await supabase
-      .from('business_matches')
-      .select('business_place_id')
-      .eq('user_id', userId)
-      .in('business_place_id', placeIds)
-    if (existErr) {
-      console.warn('[process-quiz] existing check failed:', existErr.message)
-      toInsert.push(...rows)
-    } else {
-      const existingSet = new Set((existing || []).map((e: { business_place_id: string }) => e.business_place_id))
-      for (const r of rows) if (!existingSet.has(r.business_place_id)) toInsert.push(r)
+  // Score & prepare rows
+  const rows: BusinessMatchRow[] = candidates.slice(0, 50).map((c) => {
+    const score = scoreBusiness(c, prefs);
+    const reasonBits: string[] = [];
+    if (prefs.city && (c.address || "").toLowerCase().includes(prefs.city.toLowerCase())) {
+      reasonBits.push(`near ${prefs.city}`);
     }
+    if (c.category && prefs.topics?.map((t) => t.toLowerCase()).includes(c.category.toLowerCase())) {
+      reasonBits.push(`category match: ${c.category}`);
+    }
+    if (typeof c.rating === "number" && c.rating >= 4.2) reasonBits.push(`high rating ${c.rating.toFixed(1)}`);
+
+    const reason = reasonBits.length
+      ? `Matched on ${reasonBits.join(", ")}`
+      : `Match score ${(score * 100).toFixed(0)}%`;
+
+    return {
+      athlete_id: resolvedAthleteId!,
+      business_place_id: c.business_place_id || c.place_id || null,
+      name: c.name || "Business",
+      category: c.category || (Array.isArray(c.types) ? c.types?.[0] ?? null : null),
+      address: c.address || null,
+      city: c.city || null,
+      website: c.website || null,
+      business_rating: typeof c.rating === "number" ? c.rating : null,
+      types: c.types || null,
+      match_score: score,
+      reason,
+    };
+  });
+
+  // Upsert into business_matches (wipe recent batch for this athlete to keep list fresh)
+  // Assumes table columns: athlete_id, business_place_id, name, category, address, city, website,
+  //                        business_rating, types, match_score, reason, created_at
+  // If you have a composite unique key on (athlete_id, business_place_id), we can upsert on conflict.
+  if (rows.length > 0) {
+    const { error: upErr } = await supabase
+      .from("business_matches")
+      .upsert(rows, { onConflict: "athlete_id,business_place_id" });
+    if (upErr) return fail("business_matches upsert failed", upErr.message);
   }
 
-  // Insert
-  let inserted = 0
-  if (toInsert.length) {
-    const chunkSize = 100
-    for (let i = 0; i < toInsert.length; i += chunkSize) {
-      const chunk = toInsert.slice(i, i + chunkSize)
-      const { error: insErr } = await supabase.from('business_matches').insert(chunk)
-      if (insErr) { console.warn('[process-quiz] insert chunk failed:', insErr.message) } else { inserted += chunk.length }
-    }
-  }
+  // Return top 10 back to client
+  const top = rows
+    .sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0))
+    .slice(0, 10);
 
   return ok({
-    matches_inserted: inserted,
-    searched: nearby.length,
-    radius_meters: radius,
-    radius_miles: radiusMiles,
-    used_center: { lat: centerLat, lng: centerLng },
-  })
-})
+    athlete_id: resolvedAthleteId,
+    used_location: { lat, lng, radiusMiles },
+    topics: prefs.topics,
+    count_saved: rows.length,
+    matches: top,
+  });
+});

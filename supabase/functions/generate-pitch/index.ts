@@ -5,16 +5,21 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 
 type Channel = 'email' | 'instagram' | 'tiktok' | 'x'
 interface AthleteProfileRow { id?: string; full_name?: string; sport?: string; persona_summary?: string; traits?: string[]|string|null; interests?: string[]|string|null; socials?: Record<string,unknown>|string|null }
-interface ProfileFallback { id?: string; full_name?: string|null; sport?: string|null; email?: string|null }
+interface ProfileFallback { id?: string; full_name?: string|null; email?: string|null }
 interface BusinessRow { id?: string; name?: string; category?: string; city?: string; brand_tone?: string|null; campaign_goals?: string|null }
 interface MatchRow { business_place_id?: string; name?: string; category?: string; address?: string|null }
 interface PitchDraftRow { id: string; athlete_id: string; business_id: string|null; channel: Channel; draft: string; status: 'draft'|'sent'; created_at: string; updated_at: string }
 interface OpenAIResponse { choices?: { message?: { content?: string } }[]; error?: { message?: string } }
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || ''
-// UPDATED: use project-scoped secret names
-const SUPABASE_URL = Deno.env.get('PROJECT_SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('PROJECT_SUPABASE_SERVICE_ROLE_KEY')!
+const SUPABASE_URL =
+  Deno.env.get('PROJECT_SUPABASE_URL') ||
+  Deno.env.get('SUPABASE_URL') ||
+  ''
+const SUPABASE_SERVICE_ROLE_KEY =
+  Deno.env.get('PROJECT_SUPABASE_SERVICE_ROLE_KEY') ||
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ||
+  ''
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -33,8 +38,10 @@ function ok(data: unknown) {
   return respond({ ok: true, ...obj })
 }
 function fail(error: string, detail?: unknown, status = 400) { return respond({ ok: false, error, detail }, { status }) }
+
 function sanitizeChannel(v: unknown): Channel {
-  const s = String(v || '').toLowerCase()
+  const s = String(v || '').toLowerCase().trim()
+  if (s === 'dm' || s === 'direct') return 'instagram'
   return (['email','instagram','tiktok','x'] as const).includes(s as Channel) ? (s as Channel) : 'email'
 }
 function asInline(x: unknown): string {
@@ -55,52 +62,64 @@ async function ensureProfileExists(client: SupabaseClient, userId: string, fullN
   const { error: insErr } = await client.from('profiles').insert({ id: userId, full_name: fullName }).single()
   if (insErr && !/duplicate|unique/i.test(insErr.message)) throw new Error(`profiles insert failed: ${insErr.message}`)
 }
+function str(x: unknown | null | undefined) { const s = (x ?? '').toString().trim(); return s.length ? s : undefined }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: new Headers(CORS_HEADERS) })
   if (req.method !== 'POST') return fail('Method not allowed', undefined, 405)
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return fail('Missing Supabase env')
+  if (!OPENAI_API_KEY) return fail('OPENAI_API_KEY is not set in environment')
 
-  let payload: {
-    athlete_id?: string
-    business_id?: string|null
-    business_place_id?: string|null
-    name?: string|null
-    category?: string|null
-    city?: string|null
-    address?: string|null
-    channel?: string
-  }
-  try { payload = await req.json() } catch { return fail('Invalid JSON body') }
+  let raw: Record<string, unknown>
+  try { raw = await req.json() } catch { return fail('Invalid JSON body') }
 
-  const athlete_id = payload.athlete_id?.trim()
+  const athlete_id = str(raw.athlete_id) || str((raw as any).athleteId)
+  const business_id = str(raw.business_id) || str((raw as any).businessId) || null
+  const business_place_id = str(raw.business_place_id) || str((raw as any).businessPlaceId) || null
+  const channel = sanitizeChannel((raw.channel ?? (raw as any).contactChannel) as string)
+  const payloadName = str(raw.name) || str((raw as any).businessName)
+  const payloadCategory = str(raw.category)
+  const payloadCity = str(raw.city)
+  const payloadAddress = str(raw.address)
+
   if (!athlete_id) return fail('athlete_id is required')
-
-  const business_id = payload.business_id?.trim() || null
-  const business_place_id = payload.business_place_id?.trim() || null
-  const channel = sanitizeChannel(payload.channel)
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-  // Athlete load
+  // ---- Athlete load (soft-fail on athlete_profiles) ----
   let athlete: AthleteProfileRow | null = null
-  const { data: aprof, error: aErr } = await supabase.from('athlete_profiles')
-    .select('id, full_name, sport, persona_summary, traits, interests, socials')
-    .eq('id', athlete_id).maybeSingle<AthleteProfileRow>()
-  if (aErr) return fail('athlete_profiles lookup failed', aErr.message)
+
+  let aprof: AthleteProfileRow | null = null
+  try {
+    const res = await supabase
+      .from('athlete_profiles')
+      .select('id, full_name, sport, persona_summary, traits, interests, socials')
+      .eq('id', athlete_id)
+      .maybeSingle<AthleteProfileRow>()
+    if (res.error) {
+      console.warn('athlete_profiles soft error:', res.error.message)
+    } else {
+      aprof = res.data || null
+    }
+  } catch (e) {
+    console.warn('athlete_profiles soft exception:', (e as Error)?.message)
+  }
 
   if (aprof) {
     athlete = aprof
   } else {
-    const { data: prof, error: pErr } = await supabase.from('profiles')
-      .select('id, full_name, sport, email').eq('id', athlete_id).maybeSingle<ProfileFallback>()
+    // ⚠️ Select only columns guaranteed to exist on profiles
+    const { data: prof, error: pErr } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .eq('id', athlete_id)
+      .maybeSingle<ProfileFallback>()
     if (pErr) return fail('profiles lookup failed', pErr.message)
     if (prof) {
       athlete = {
         id: prof.id,
         full_name: prof.full_name || 'Student Athlete',
-        sport: (prof.sport as string) || undefined,
         persona_summary: 'Student-athlete seeking local NIL partnerships.',
         traits: [],
         interests: [],
@@ -118,7 +137,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Business / match lookup
+  // ---- Business / match lookup ----
   let biz: BusinessRow | null = null
   let matchRow: MatchRow | null = null
   if (business_id) {
@@ -130,18 +149,16 @@ Deno.serve(async (req) => {
   } else if (business_place_id) {
     const { data: m, error: mErr } = await supabase.from('business_matches')
       .select('business_place_id, name, category, address')
-      .eq('user_id', athlete_id)
+      .eq('athlete_id', athlete_id)
       .eq('business_place_id', business_place_id)
       .maybeSingle<MatchRow>()
     if (mErr) return fail('business_matches lookup failed', mErr.message)
     matchRow = m || null
   }
 
-  const composedName = biz?.name || matchRow?.name || payload.name || 'Local Business'
-  const composedCategory = biz?.category || matchRow?.category || payload.category || 'local'
-  const composedCity = biz?.city || payload.city || inferCity(matchRow?.address || payload.address, null) || 'your area'
-
-  if (!OPENAI_API_KEY) return fail('OPENAI_API_KEY is not set in environment')
+  const composedName = biz?.name || matchRow?.name || payloadName || 'Local Business'
+  const composedCategory = biz?.category || matchRow?.category || payloadCategory || 'local'
+  const composedCity = biz?.city || payloadCity || inferCity(matchRow?.address || payloadAddress, null) || 'your area'
 
   const system = 'You write brief NIL outreach pitches for student athletes. Keep it friendly, specific, and under 120 words for social; under 180 for email.'
   const user = `
@@ -159,7 +176,7 @@ Channel: ${channel}
 Return JSON with: {subject?, body, cta}.
 `.trim()
 
-  // OpenAI call
+  // ---- OpenAI call ----
   let content = ''
   try {
     const oaRes = await fetch('https://api.openai.com/v1/chat/completions', {

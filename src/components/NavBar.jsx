@@ -3,6 +3,14 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import logo from "../assets/rootd-logo.png";
+import { BASELINE } from "../lib/config.js";
+// ...inside the component render, near the top nav:
+{BASELINE && (
+  <div style={{background:"#FFF4D6",border:"1px solid #E7D7A3",padding:6,borderRadius:8,marginRight:8,fontSize:12}}>
+    Baseline mode: UI simplified. Matching pipeline under test.
+  </div>
+)}
+
 
 const linkBase = {
   textDecoration: "none",

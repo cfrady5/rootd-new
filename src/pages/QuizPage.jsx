@@ -429,3 +429,8 @@ export default function QuizPage() {
     </div>
   );
 }
+// before submit() call, ensure lat/lng present
+navigator.geolocation?.getCurrentPosition(
+  (pos) => setAnswers(a => ({...a, lat: pos.coords.latitude, lng: pos.coords.longitude})),
+  () => {}
+);

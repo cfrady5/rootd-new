@@ -1,0 +1,3 @@
+# supabase/functions/find-businesses/supabase.toml
+[functions.find-businesses]
+verify_jwt = false

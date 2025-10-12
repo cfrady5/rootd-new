@@ -1,18 +1,28 @@
-// src/main.jsx
-console.log('Vite ENV keys:', Object.keys(import.meta.env || {}));
-console.log('VITE_SUPABASE_URL:', import.meta.env?.VITE_SUPABASE_URL);
-console.log('VITE_SUPABASE_ANON_KEY present:', !!import.meta.env?.VITE_SUPABASE_ANON_KEY);
-
+// /src/main.jsx — fix AuthProvider import
 import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App.jsx";
-import "./index.css";
-import AuthProvider from "./auth/AuthProvider.jsx";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AuthProvider from "./auth/AuthProvider.jsx"; // <-- default import
+import QuizPage from "./pages/QuizPage.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import AuthPage from "./pages/AuthPage.jsx";
+import DirectorPortal from "./pages/DirectorPortal.jsx";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+function App() {
+  return (
     <AuthProvider>
-      <App />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/quiz" element={<QuizPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/director" element={<DirectorPortal />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
-  </React.StrictMode>
-);
+  );
+}
+
+createRoot(document.getElementById("root")).render(<App />);

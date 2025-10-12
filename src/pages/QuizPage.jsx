@@ -1,25 +1,22 @@
-// /src/pages/QuizPage.jsx  (updated to support multiNumber + ranked)
+// /src/pages/QuizPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import quizQuestions, { quizQuestions as namedQuiz } from "../data/quizQuestions.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
-import { insertQuizResponse } from "../lib/api.js";
+import supabase from "../lib/supabaseClient.js";
+import { normalizeForScorer } from "../lib/quizMap.js";
 
 const green = "#0FA958";
 const hair = "#E7EEF3";
 const muted = "#5E6B77";
-
-// prefer default export, but keep backward compat
 const QUESTIONS = quizQuestions || namedQuiz;
+const LS_KEY = "rootd_quiz_v2";
 
 function Progress({ current, total }) {
   const pct = Math.round(((current + 1) / total) * 100);
   return (
     <div>
-      <div
-        aria-hidden
-        style={{ height: 10, borderRadius: 999, background: "#EEF4F7", border: `1px solid ${hair}`, overflow: "hidden" }}
-      >
+      <div aria-hidden style={{ height: 10, borderRadius: 999, background: "#EEF4F7", border: `1px solid ${hair}`, overflow: "hidden" }}>
         <div style={{ width: `${pct}%`, height: "100%", background: green, transition: "width .2s ease" }} />
       </div>
       <div className="subtle" style={{ marginTop: 6, fontWeight: 800 }}>
@@ -28,7 +25,6 @@ function Progress({ current, total }) {
     </div>
   );
 }
-
 function CategoryChip({ text }) {
   return (
     <span
@@ -49,7 +45,6 @@ function CategoryChip({ text }) {
     </span>
   );
 }
-
 function Pill({ active, onClick, children }) {
   return (
     <button
@@ -70,7 +65,6 @@ function Pill({ active, onClick, children }) {
     </button>
   );
 }
-
 function CheckPill({ checked, onToggle, children }) {
   return (
     <button
@@ -120,6 +114,7 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [previewReach, setPreviewReach] = useState(0);
 
   useEffect(() => {
     if (useAuth && session === null) {
@@ -128,7 +123,40 @@ export default function QuizPage() {
     }
   }, [session, navigate]);
 
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+      if (saved.answers) setAnswers(saved.answers);
+      if (Number.isFinite(saved.step)) setStep(saved.step);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ step, answers }));
+    } catch {}
+  }, [step, answers]);
+
   const q = useMemo(() => QUESTIONS[step], [step]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowRight" && canContinue && step < total - 1) setStep((s) => s + 1);
+      if (e.key === "ArrowLeft" && step > 0) setStep((s) => s - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canContinue, step, total]);
+
+  useEffect(() => {
+    try {
+      const norm = normalizeForScorer(answers);
+      const totalFollowers = Object.values(norm.following || {}).reduce((a, b) => a + Number(b || 0), 0);
+      const reach = Math.max(0, Math.min(1, Math.log10(totalFollowers + 1) / 6));
+      setPreviewReach(reach);
+    } catch {
+      setPreviewReach(0);
+    }
+  }, [answers]);
 
   const setValue = (val) =>
     setAnswers((prev) => ({
@@ -136,7 +164,6 @@ export default function QuizPage() {
       [q.id]: val,
     }));
 
-  // ranked helpers
   const toggleRanked = (opt) => {
     const v = Array.isArray(answers[q.id]) ? answers[q.id] : [];
     if (v.includes(opt)) {
@@ -151,7 +178,6 @@ export default function QuizPage() {
   const canContinue = useMemo(() => {
     if (!q) return false;
     const v = answers[q.id];
-
     if (q.type === "text") return Boolean(String(v ?? "").trim());
     if (q.type === "single") return !!v;
     if (q.type === "multiple") return Array.isArray(v) && v.length > 0;
@@ -192,10 +218,22 @@ export default function QuizPage() {
       }
       if (!session?.user?.id) throw new Error("You must be signed in to submit the quiz.");
 
-      const payload = { version: 2, completed_at: new Date().toISOString(), responses: answers };
-      await insertQuizResponse(session.user.id, payload);
+      const normalized = normalizeForScorer(answers);
+      const { data: { session: fresh } } = await supabase.auth.getSession();
+      const jwt = fresh?.access_token;
+      if (!jwt) throw new Error("Auth expired. Sign in again.");
 
-      navigate("/dashboard");
+      const base = import.meta.env.VITE_SUPABASE_URL;
+      const res = await fetch(`${base}/functions/v1/process-quiz`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ answers: normalized, ...normalized }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.error || `Function error ${res.status}`);
+
+      try { localStorage.removeItem(LS_KEY); } catch {}
+      navigate("/dashboard", { state: { rootd_score: out.rootd_score, components: out.components } });
     } catch (e) {
       setError(e.message || "There was a problem submitting your answers.");
     } finally {
@@ -251,10 +289,14 @@ export default function QuizPage() {
               onChange={(e) => setValue(Number(e.target.value))}
               style={{ width: "100%" }}
             />
-            <span style={{ minWidth: 64, textAlign: "right" }}>{v}{unit ? ` ${unit}` : ""}</span>
+            <span style={{ minWidth: 64, textAlign: "right" }}>
+              {v}
+              {unit ? ` ${unit}` : ""}
+            </span>
           </div>
           <div className="subtle" style={{ marginTop: 6 }}>
-            Range: {min}–{max}{unit ? ` ${unit}` : ""}, step {step}
+            Range: {min}–{max}
+            {unit ? ` ${unit}` : ""}, step {step}
           </div>
         </div>
       );
@@ -265,8 +307,8 @@ export default function QuizPage() {
       return (
         <div className="grid gap-3" style={{ marginTop: 8 }}>
           {q.fields.map((f) => (
-            <label key={f.key} className="flex items-center gap-2" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="w-32" style={{ width: 140, fontWeight: 800 }}>{f.label}</span>
+            <label key={f.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 140, fontWeight: 800 }}>{f.label}</span>
               <input
                 type="number"
                 min="0"
@@ -274,7 +316,7 @@ export default function QuizPage() {
                 onChange={(e) =>
                   setAnswers((a) => ({
                     ...a,
-                    [q.id]: { ...(a[q.id] || {}), [f.key]: Number(e.target.value) || 0 }
+                    [q.id]: { ...(a[q.id] || {}), [f.key]: Number(e.target.value) || 0 },
                   }))
                 }
                 className="input"
@@ -302,7 +344,9 @@ export default function QuizPage() {
               );
             })}
           </div>
-          <button type="button" className="btn" onClick={clearRanked}>Clear selection</button>
+          <button type="button" className="btn" onClick={clearRanked}>
+            Clear selection
+          </button>
           {q.max ? (
             <div className="subtle" style={{ marginTop: 6 }}>
               Select up to {q.max}. Click again to remove. Order = priority.
@@ -341,9 +385,7 @@ export default function QuizPage() {
       </div>
 
       <section className="card" style={{ padding: 18 }}>
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", marginBottom: 8 }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", marginBottom: 8 }}>
           <CategoryChip text={q.category} />
           <div className="subtle" style={{ fontWeight: 800 }}>
             Q{q.id} / {total}
@@ -354,11 +396,18 @@ export default function QuizPage() {
 
         {renderQuestion()}
 
-        <div
-          style={{ display: "flex", justifyContent: "space-between", marginTop: 16, gap: 8, flexWrap: "wrap" }}
-        >
-          <button className="btn" onClick={handleBack} disabled={step === 0}>← Back</button>
+        {/* live mini preview */}
+        <div className="card" style={{ marginTop: 14, padding: 12 }}>
+          <div className="subtle" style={{ fontWeight: 800 }}>Rootd score preview</div>
+          <div style={{ fontWeight: 900, fontSize: 20 }}>
+            {previewReach.toFixed(2)}
+            <span style={{ fontSize: 12, marginLeft: 6 }}>/ reach component</span>
+          </div>
+          <div className="subtle">Final score computed server-side on submit.</div>
+        </div>
 
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" onClick={handleBack} disabled={step === 0}>← Back</button>
           {step < total - 1 ? (
             <button className="btn btn-primary" onClick={handleNext} disabled={!canContinue}>Next →</button>
           ) : (

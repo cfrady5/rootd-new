@@ -1,11 +1,13 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import NavBar from "./components/NavBar.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import QuizPage from "./pages/QuizPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-import AuthPage from "./pages/AuthPage.jsx";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import Profile from "./pages/Profile.jsx";
 import DemoPage from "./pages/DemoPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import DirectorPortal from "./pages/DirectorPortal.jsx";
@@ -28,7 +30,7 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <>
       <NavBar />
       <main>
         <Routes>
@@ -38,18 +40,11 @@ export default function App() {
           <Route path="/director" element={<DirectorPortal />} />
 
           {/* Auth */}
-          <Route path="/login" element={<AuthPage />} />
-          <Route path="/signup" element={<AuthPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
           {/* Protected */}
-          <Route
-            path="/quiz"
-            element={
-              <ProtectedRoute>
-                <QuizPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
           <Route
             path="/dashboard"
             element={
@@ -58,11 +53,12 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-    </BrowserRouter>
+    </>
   );
 }

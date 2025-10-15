@@ -1,0 +1,2 @@
+[functions.process-quiz]
+verify_jwt = true

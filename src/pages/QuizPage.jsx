@@ -5,6 +5,7 @@ import quizQuestions, { quizQuestions as namedQuiz } from "../data/quizQuestions
 import { useAuth } from "../auth/AuthProvider.jsx";
 import supabase from "../lib/supabaseClient.js";
 import { normalizeForScorer } from "../lib/quizMap.js";
+import { runProcessQuiz } from "../lib/api.js";
 
 const green = "#0FA958";
 const hair = "#E7EEF3";
@@ -138,14 +139,23 @@ export default function QuizPage() {
 
   const q = useMemo(() => QUESTIONS[step], [step]);
 
+  // (keydown handler moved below after canContinue is declared)
+
+  // Attempt geolocation once on mount to prefill answers lat/lng
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "ArrowRight" && canContinue && step < total - 1) setStep((s) => s + 1);
-      if (e.key === "ArrowLeft" && step > 0) setStep((s) => s - 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [canContinue, step, total]);
+    let mounted = true;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!mounted) return;
+          setAnswers((a) => ({ ...(a || {}), lat: pos.coords.latitude, lng: pos.coords.longitude, preferred_radius_miles: 10 }));
+        },
+        () => {},
+        { maximumAge: 1000 * 60 * 5 }
+      );
+    }
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     try {
@@ -193,6 +203,16 @@ export default function QuizPage() {
     return false;
   }, [answers, q]);
 
+  // keydown handler (ArrowLeft/ArrowRight). Runs after `canContinue` is computed.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowRight" && canContinue && step < total - 1) setStep((s) => s + 1);
+      if (e.key === "ArrowLeft" && step > 0) setStep((s) => s - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canContinue, step, total]);
+
   const handleNext = () => setStep((s) => Math.min(total - 1, s + 1));
   const handleBack = () => setStep((s) => Math.max(0, s - 1));
 
@@ -223,14 +243,9 @@ export default function QuizPage() {
       const jwt = fresh?.access_token;
       if (!jwt) throw new Error("Auth expired. Sign in again.");
 
-      const base = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(`${base}/functions/v1/process-quiz`, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ answers: normalized, ...normalized }),
-      });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || !out.ok) throw new Error(out.error || `Function error ${res.status}`);
+      // Use centralized helper which calls the process-quiz function
+      const out = await runProcessQuiz(jwt, { answers: normalized, ...normalized });
+      if (!out || !out.ok) throw new Error(out?.error || "Function error");
 
       try { localStorage.removeItem(LS_KEY); } catch {}
       navigate("/dashboard", { state: { rootd_score: out.rootd_score, components: out.components } });
@@ -429,8 +444,4 @@ export default function QuizPage() {
     </div>
   );
 }
-// before submit() call, ensure lat/lng present
-navigator.geolocation?.getCurrentPosition(
-  (pos) => setAnswers(a => ({...a, lat: pos.coords.latitude, lng: pos.coords.longitude})),
-  () => {}
-);
+// geolocation handled in mount effect

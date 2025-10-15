@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import supabase from "../lib/supabaseClient.js";
+import { runProcessQuiz, getMatches } from "../lib/api.js";
 import MatchCard from "../components/MatchCard.jsx";
 
 const hair = "#E7EEF3";
@@ -46,13 +47,7 @@ export default function Dashboard() {
     setLoading(true);
     setError("");
     try {
-      const { data, error: err } = await supabase
-        .from("business_matches")
-        .select("business_place_id,place_id,business_id,name,category,city,website,business_rating,match_score,reason,address,types,photo_url,distance_meters,rating")
-        .eq("athlete_id", athleteId)
-        .order("match_score", { ascending: false })
-        .limit(50);
-      if (err) throw err;
+      const data = await getMatches(supabase, athleteId);
       setMatches(data || []);
     } catch (e) {
       setError(e.message || "Failed to load matches.");
@@ -69,16 +64,23 @@ export default function Dashboard() {
     setLoading(true);
     setError("");
     try {
+      // try to get user location and call process-quiz with location and default categories
+      const geo = await new Promise((res) => {
+        if (!navigator.geolocation) return res(null);
+        navigator.geolocation.getCurrentPosition((p) => res(p.coords), () => res(null));
+      });
+
       const { data: { session: fresh } } = await supabase.auth.getSession();
       const jwt = fresh?.access_token;
-      const base = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(`${base}/functions/v1/process-quiz`, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({}) // function should fallback to latest normalized by JWT
-      });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || !out.ok) throw new Error(out.error || `Match failed (${res.status})`);
+      const payload = {};
+      if (geo) {
+        payload.lat = geo.latitude;
+        payload.lng = geo.longitude;
+        payload.preferred_radius_miles = 10;
+        payload.categories = ["coffee", "gym"];
+      }
+      const out = await runProcessQuiz(jwt, { answers: payload });
+      if (!out || !out.ok) throw new Error(out?.error || "Match failed");
       await fetchMatches();
     } catch (e) {
       setError(e.message || "Match run failed.");

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
 import supabase, { HAS_SUPABASE } from "../lib/supabaseClient.js";
 
@@ -56,7 +57,7 @@ export default function AuthProvider({ children }) {
       try {
         await supabase.auth.signOut();
         setSession(null);
-      } catch (e) {
+      } catch {
         // ignore
       }
     },

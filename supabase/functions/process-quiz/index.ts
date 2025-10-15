@@ -149,12 +149,19 @@ Deno.serve(async (req) => {
           photo_url: c.photo_url ?? null,
           rootd_biz_score: ms,
           score_components: { topic_overlap: true, rating: c.rating ?? null },
+          normalized: null,
         };
       });
 
       if (matches.length) {
-        await supabase.from("business_matches")
+        console.log("Attempting to upsert matches:", matches.length, matches);
+        const { data, error } = await supabase.from("business_matches")
           .upsert(matches, { onConflict: "athlete_id,business_place_id" });
+        console.log("Upsert result:", { data, error });
+        if (error) {
+          console.error("Upsert error:", error);
+          return json({ ok: false, error: "matches_upsert_failed", detail: error.message }, 500);
+        }
       }
     } catch (e) {
       return json({ ok: false, error: "finder_exception", detail: String(e) }, 500);

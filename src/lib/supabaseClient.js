@@ -12,7 +12,6 @@ if (!url || !key) {
   // Warn and create a graceful stub so imports don't crash the app at module load.
   // This keeps the UI mountable in dev while providing actionable errors when
   // the app actually tries to use Supabase functionality.
-  // eslint-disable-next-line no-console
   console.warn("[Supabase env check] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY", { url, key });
 
   const msg = "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Add them to .env.local and restart the dev server.";
@@ -23,7 +22,7 @@ if (!url || !key) {
       // return shape compatible with supabase.auth.getSession()
       return { data: { session: null }, error: null };
     },
-    onAuthStateChange(_cb) {
+    onAuthStateChange() {
       // return an object with unsubscribe to match Supabase API
       return { data: { subscription: { unsubscribe: () => {} } } };
     },

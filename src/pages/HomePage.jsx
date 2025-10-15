@@ -1,5 +1,5 @@
 // src/pages/HomePage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 function MetricCard({ label, value, hint }) {
@@ -16,19 +16,23 @@ function MetricCard({ label, value, hint }) {
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 36, fontWeight: 900, color: "#0f172a", letterSpacing: "-.02em" }}>
+      <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 36, fontWeight: 900, color: "var(--text)", letterSpacing: "-.02em" }}>
         {value}
       </div>
-      {hint && <div style={{ marginTop: 10, fontSize: 12, color: "#94a3b8" }}>{hint}</div>}
+      {hint && <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>{hint}</div>}
     </div>
   );
 }
 
 const TESTIMONIALS = [
   {
-    quote:
-      "Rootd matched me with a local wellness brand that aligns with my values. It felt effortless—and legit.",
+    quote: (
+      <>
+        <span style={{ color: "var(--accent-500)", fontWeight: 800 }}>Rootd</span> in Community. Driven by{" "}
+        <strong>athletes</strong>.
+      </>
+    ),
     name: "Jordan M.",
     role: "Women’s Basketball • Stanford",
   },
@@ -89,7 +93,7 @@ function Carousel() {
           }}
         />
         <div style={{ display: "grid", gap: 12, placeItems: "center" }}>
-          <div style={{ fontSize: 14, color: "#86efac" }}>What athletes are saying</div>
+          <div style={{ fontSize: 14, color: "var(--accent-300)" }}>What athletes are saying</div>
           <blockquote
             style={{
               margin: 0,
@@ -104,7 +108,7 @@ function Carousel() {
           </blockquote>
           <div style={{ display: "flex", gap: 10, alignItems: "baseline", marginTop: 6 }}>
             <div style={{ fontWeight: 800 }}>{active.name}</div>
-            <div style={{ color: "#9aa5b1", fontSize: 14 }}>{active.role}</div>
+            <div style={{ color: "var(--muted)", fontSize: 14 }}>{active.role}</div>
           </div>
         </div>
 
@@ -210,8 +214,8 @@ export default function HomePage() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 18, color: "#6b7280", marginBottom: 12 }}>
-            <span style={{ color: "#16a34a", fontWeight: 800 }}>Rootd</span> in Community. Driven by{" "}
+          <div style={{ fontSize: 18, color: "var(--muted)", marginBottom: 12 }}>
+            <span style={{ color: "var(--accent-500)", fontWeight: 800 }}>Rootd</span> in Community. Driven by{" "}
             <strong>athletes</strong>.
           </div>
 
@@ -246,17 +250,17 @@ export default function HomePage() {
           <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 32 }}>
             <button
               onClick={() => navigate("/quiz")}
-              style={{
-                padding: "14px 28px",
-                borderRadius: 14,
-                background: "#16a34a",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 16,
-                border: "none",
-                boxShadow: "0 8px 24px rgba(22,163,74,.25)",
-                transition: "all .2s ease",
-              }}
+                style={{
+                  padding: "14px 28px",
+                  borderRadius: 14,
+                  background: "var(--accent-500)",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  border: "none",
+                  boxShadow: "0 8px 24px rgba(22,163,74,.25)",
+                  transition: "all .2s ease",
+                }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.boxShadow = "0 10px 28px rgba(22,163,74,.35)")
               }

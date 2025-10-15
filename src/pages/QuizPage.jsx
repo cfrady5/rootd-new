@@ -7,9 +7,9 @@ import supabase from "../lib/supabaseClient.js";
 import { normalizeForScorer } from "../lib/quizMap.js";
 import { runProcessQuiz } from "../lib/api.js";
 
-const green = "#0FA958";
-const hair = "#E7EEF3";
-const muted = "#5E6B77";
+const green = "var(--accent-500)";
+const hair = "var(--border)";
+const muted = "var(--muted)";
 const QUESTIONS = quizQuestions || namedQuiz;
 const LS_KEY = "rootd_quiz_v2";
 
@@ -129,12 +129,16 @@ export default function QuizPage() {
       const saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
       if (saved.answers) setAnswers(saved.answers);
       if (Number.isFinite(saved.step)) setStep(saved.step);
-    } catch {}
+    } catch {
+      // ignore localStorage parse errors
+    }
   }, []);
   useEffect(() => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ step, answers }));
-    } catch {}
+    } catch {
+      // ignore localStorage write errors
+    }
   }, [step, answers]);
 
   const q = useMemo(() => QUESTIONS[step], [step]);
@@ -150,7 +154,9 @@ export default function QuizPage() {
           if (!mounted) return;
           setAnswers((a) => ({ ...(a || {}), lat: pos.coords.latitude, lng: pos.coords.longitude, preferred_radius_miles: 10 }));
         },
-        () => {},
+        () => {
+          // ignore geolocation permission errors
+        },
         { maximumAge: 1000 * 60 * 5 }
       );
     }
@@ -164,6 +170,7 @@ export default function QuizPage() {
       const reach = Math.max(0, Math.min(1, Math.log10(totalFollowers + 1) / 6));
       setPreviewReach(reach);
     } catch {
+      // normalization failed; default previewReach to 0
       setPreviewReach(0);
     }
   }, [answers]);
@@ -247,7 +254,7 @@ export default function QuizPage() {
       const out = await runProcessQuiz(jwt, { answers: normalized, ...normalized });
       if (!out || !out.ok) throw new Error(out?.error || "Function error");
 
-      try { localStorage.removeItem(LS_KEY); } catch {}
+  try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
       navigate("/dashboard", { state: { rootd_score: out.rootd_score, components: out.components } });
     } catch (e) {
       setError(e.message || "There was a problem submitting your answers.");

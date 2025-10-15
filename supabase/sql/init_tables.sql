@@ -13,6 +13,79 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamptz DEFAULT now()
 );
 
+-- Add missing columns to profiles table
+DO $$
+BEGIN
+  -- Basic profile fields
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='school'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN school text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='sport'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN sport text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='bio'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN bio text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='location'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN location text;
+  END IF;
+  -- Social media follower counts
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='instagram'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN instagram integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='tiktok'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN tiktok integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='youtube'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN youtube integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='x'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN x integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='linkedin'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN linkedin integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='facebook'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN facebook integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='profiles' AND column_name='total_followers'
+  ) THEN
+    ALTER TABLE public.profiles ADD COLUMN total_followers integer DEFAULT 0;
+  END IF;
+END$$;
+
 -- Ensure quiz_responses exists and has the 'answers' column used by older clients
 CREATE TABLE IF NOT EXISTS public.quiz_responses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,3 +193,68 @@ CREATE TABLE IF NOT EXISTS public.business_matches (
 );
 
 -- End of migration
+
+-- Additional app tables (conservative schemas)
+CREATE TABLE IF NOT EXISTS public.athlete_profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name text,
+  avatar_url text,
+  school text,
+  sport text,
+  preferred_radius numeric,
+  availability text,
+  compensation text,
+  rootd_score numeric,
+  completion_percent int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.achievements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id uuid REFERENCES public.athlete_profiles(id) ON DELETE CASCADE,
+  title text,
+  type text,
+  date text,
+  link text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.deals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id uuid REFERENCES public.athlete_profiles(id) ON DELETE CASCADE,
+  business_name text,
+  value text,
+  stage text,
+  last_activity timestamptz,
+  metadata jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id uuid,
+  athlete_id uuid REFERENCES public.athlete_profiles(id) ON DELETE CASCADE,
+  business_name text,
+  body text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id uuid REFERENCES public.athlete_profiles(id) ON DELETE CASCADE,
+  title text,
+  done boolean DEFAULT false,
+  due date,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id uuid REFERENCES public.athlete_profiles(id) ON DELETE CASCADE,
+  title text,
+  body text,
+  read boolean DEFAULT false,
+  type text,
+  created_at timestamptz DEFAULT now()
+);
+

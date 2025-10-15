@@ -11,14 +11,14 @@ export async function runProcessQuiz(token, answers) {
     let parsed = text;
     try {
       parsed = JSON.parse(text);
-    } catch (e) {
+    } catch {
       // keep raw text if not JSON
     }
     throw new Error(`process-quiz ${r.status} ${typeof parsed === "string" ? parsed : JSON.stringify(parsed)}`);
   }
   try {
     return JSON.parse(text);
-  } catch (e) {
+  } catch {
     return {}; // unexpected empty/invalid body
   }
 }

@@ -63,7 +63,7 @@ const PARTNER_SCHOOLS = [
 ];
 
 export default function AboutPage() {
-  const [schools, setSchools] = useState(PARTNER_SCHOOLS);
+  const [schools, _setSchools] = useState(PARTNER_SCHOOLS);
   const [q, setQ] = useState("");
   const [stateFilter, setStateFilter] = useState("All");
 
@@ -83,11 +83,11 @@ export default function AboutPage() {
   }, [schools, q, stateFilter]);
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 18px", color: "#0f172a" }}>
+  <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 18px", color: "var(--text)" }}>
       {/* Header + Story */}
       <section style={{ ...card, padding: 20 }}>
         <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0 }}>About Rootd</h1>
-        <p style={{ color: "#4b5563", margin: "10px 0 0" }}>
+  <p style={{ color: "var(--muted)", margin: "10px 0 0" }}>
           We connect small businesses with student-athletes who would not otherwise find the right NIL fit.
           Rootd reduces hassle for compliance teams, gives athletes a guided path to tell their story, and
           unlocks local partnerships that compound value for campuses and communities.
@@ -103,7 +103,7 @@ export default function AboutPage() {
       {/* Dynamic Partners Directory */}
       <section style={{ ...card, padding: 20, marginTop: 16 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Partner Schools</h2>
-        <p style={{ color: "#64748b", marginTop: 6 }}>
+  <p style={{ color: "var(--muted)", marginTop: 6 }}>
           Live directory for demo. Search or filter by state. Tags are defaults for now.
         </p>
 
@@ -126,7 +126,7 @@ export default function AboutPage() {
             <div key={s.name} style={{ ...row, borderBottom: i === filtered.length - 1 ? "none" : "1px solid #f1f5f9" }}>
               <div style={{ display: "grid", gap: 2 }}>
                 <div style={{ fontWeight: 700 }}>{s.name}</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>
                   {s.city}, {s.state} • <a href={s.website} target="_blank" rel="noreferrer" style={link}>Website</a>
                 </div>
               </div>

@@ -216,72 +216,16 @@ export default function Dashboard() {
     <ToastProvider>
     <div style={{ 
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
-      padding: "20px"
+      background: "var(--bg)",
+      padding: "24px"
     }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
 
         <HeaderBar />
 
-        <div style={{ height: 32 }} />
-
         <MetricCards />
-
-        <div style={{ height: 32 }} />
-        {/* Header Section */}
-        <div style={{
-          background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(20px)",
-          borderRadius: "24px",
-          padding: "32px",
-          marginBottom: "24px",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "24px"
-          }}>
-            <div>
-              <h1 style={{ 
-                margin: 0, 
-                fontSize: "14px",
-                color: "#064E3B"
-              }}>
-                Welcome back! 👋
-              </h1>
-              <p style={{ 
-                margin: "8px 0 0 0", 
-                fontSize: "16px", 
-                color: "var(--muted)",
-                fontWeight: "500"
-              }}>
-                Find your perfect brand partnerships
-              </p>
-            </div>
-            
-            {typeof score === "number" && (
-              <div style={{
-                background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-                color: "white",
-                padding: "16px 24px",
-                borderRadius: "16px",
-                textAlign: "center",
-                minWidth: "140px",
-                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
-              }}>
-                <div style={{ fontSize: "24px", fontWeight: "800", marginBottom: "4px" }}>
-                  {score.toFixed(2)}
-                </div>
-                <div style={{ fontSize: "12px", opacity: 0.9, fontWeight: "600" }}>
-                  ROOTD SCORE
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
+        {/* Action Buttons Section */}
+        <div className="dashboard-card" style={{ marginBottom: "24px" }}>
           <div style={{ 
             display: "flex", 
             gap: "12px", 
@@ -292,7 +236,7 @@ export default function Dashboard() {
               onClick={runMatch} 
               disabled={loading || !athleteId}
               style={{
-                background: loading ? "#9CA3AF" : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                background: loading ? "var(--secondary)" : "linear-gradient(135deg, var(--primary) 0%, #1e4f26 100%)",
                 color: "white",
                 border: "none",
                 padding: "14px 28px",
@@ -300,7 +244,7 @@ export default function Dashboard() {
                 fontSize: "16px",
                 fontWeight: "600",
                 cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: loading ? "none" : "0 4px 14px 0 rgba(16, 185, 129, 0.25)",
+                boxShadow: loading ? "none" : "0 4px 14px 0 rgba(44, 95, 52, 0.25)",
                 transform: loading ? "none" : "translateY(0)",
                 transition: "all 0.2s ease",
                 display: "flex",
@@ -310,13 +254,13 @@ export default function Dashboard() {
               onMouseOver={e => {
                 if (!loading) {
                   e.target.style.transform = "translateY(-2px)";
-                  e.target.style.boxShadow = "0 8px 25px 0 rgba(16, 185, 129, 0.32)";
+                  e.target.style.boxShadow = "0 8px 25px 0 rgba(44, 95, 52, 0.32)";
                 }
               }}
               onMouseOut={e => {
                 if (!loading) {
                   e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 4px 14px 0 rgba(16, 185, 129, 0.25)";
+                  e.target.style.boxShadow = "0 4px 14px 0 rgba(44, 95, 52, 0.25)";
                 }
               }}
             >
@@ -344,8 +288,8 @@ export default function Dashboard() {
               disabled={loading}
               style={{
                 background: "white",
-                color: "var(--muted-2)",
-                border: "2px solid #E5E7EB",
+                color: "var(--secondary)",
+                border: "2px solid var(--border)",
                 padding: "12px 24px",
                 borderRadius: "12px",
                 fontSize: "16px",
@@ -355,13 +299,13 @@ export default function Dashboard() {
               }}
               onMouseOver={e => {
                 if (!loading) {
-                  e.target.style.borderColor = "#9CA3AF";
-                  e.target.style.background = "#F9FAFB";
+                  e.target.style.borderColor = "var(--secondary)";
+                  e.target.style.background = "var(--bg)";
                 }
               }}
               onMouseOut={e => {
                 if (!loading) {
-                  e.target.style.borderColor = "#E5E7EB";
+                  e.target.style.borderColor = "var(--border)";
                   e.target.style.background = "white";
                 }
               }}
@@ -373,8 +317,8 @@ export default function Dashboard() {
               href="/quiz"
               style={{
                 background: "white",
-                color: "#374151",
-                border: "2px solid #E5E7EB",
+                color: "var(--secondary)",
+                border: "2px solid var(--border)",
                 padding: "12px 24px",
                 borderRadius: "12px",
                 fontSize: "16px",
@@ -385,11 +329,11 @@ export default function Dashboard() {
                 alignItems: "center"
               }}
               onMouseOver={e => {
-                e.target.style.borderColor = "#9CA3AF";
-                e.target.style.background = "#F9FAFB";
+                e.target.style.borderColor = "var(--secondary)";
+                e.target.style.background = "var(--bg)";
               }}
               onMouseOut={e => {
-                e.target.style.borderColor = "#E5E7EB";
+                e.target.style.borderColor = "var(--border)";
                 e.target.style.background = "white";
               }}
             >
@@ -400,9 +344,9 @@ export default function Dashboard() {
           {/* Error Message */}
           {error && (
             <div style={{
-              background: "linear-gradient(135deg, #FEFFFA 0%, #F0FFF4 100%)",
-              border: "1px solid #BBF7D0",
-              color: "#991B1B",
+              background: "linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)",
+              border: "1px solid #fc8181",
+              color: "#c53030",
               padding: "16px",
               borderRadius: "12px",
               fontSize: "14px",
@@ -419,51 +363,60 @@ export default function Dashboard() {
         {/* Stats Section */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "16px",
-          marginBottom: "24px"
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: "20px",
+          marginBottom: "32px"
         }}>
-          <div style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            borderRadius: "16px",
-            padding: "24px",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
-          }}>
-            <div style={{ fontSize: "32px", fontWeight: "800", color: "#1F2937", marginBottom: "8px" }}>
+          <div className="dashboard-card" style={{ textAlign: "center" }}>
+            <div style={{ 
+              fontSize: "36px", 
+              fontWeight: "700", 
+              color: "var(--primary)", 
+              marginBottom: "8px" 
+            }}>
               {matches.length}
             </div>
-            <div style={{ fontSize: "14px", color: "#6B7280", fontWeight: "600" }}>
+            <div style={{ 
+              fontSize: "16px", 
+              color: "var(--secondary)", 
+              fontWeight: "600" 
+            }}>
               Total Matches
             </div>
           </div>
           
-          <div style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            borderRadius: "16px",
-            padding: "24px",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
-          }}>
-            <div style={{ fontSize: "32px", fontWeight: "800", color: "#1F2937", marginBottom: "8px" }}>
+          <div className="dashboard-card" style={{ textAlign: "center" }}>
+            <div style={{ 
+              fontSize: "36px", 
+              fontWeight: "700", 
+              color: "var(--primary)", 
+              marginBottom: "8px" 
+            }}>
               {matches.filter(m => m.match_score > 0.7).length}
             </div>
-            <div style={{ fontSize: "14px", color: "#6B7280", fontWeight: "600" }}>
+            <div style={{ 
+              fontSize: "16px", 
+              color: "var(--secondary)", 
+              fontWeight: "600" 
+            }}>
               High-Quality Matches
             </div>
           </div>
 
-          <div style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            borderRadius: "16px",
-            padding: "24px",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
-          }}>
-            <div style={{ fontSize: "32px", fontWeight: "800", color: "#1F2937", marginBottom: "8px" }}>
+          <div className="dashboard-card" style={{ textAlign: "center" }}>
+            <div style={{ 
+              fontSize: "36px", 
+              fontWeight: "700", 
+              color: "var(--primary)", 
+              marginBottom: "8px" 
+            }}>
               {matches.length > 0 ? Math.round((matches.reduce((sum, m) => sum + (m.match_score || 0), 0) / matches.length) * 100) : 0}%
             </div>
-            <div style={{ fontSize: "14px", color: "#6B7280", fontWeight: "600" }}>
+            <div style={{ 
+              fontSize: "16px", 
+              color: "var(--secondary)", 
+              fontWeight: "600" 
+            }}>
               Avg Match Score
             </div>
           </div>
@@ -525,7 +478,7 @@ export default function Dashboard() {
           }}>
             {/* Modal Header */}
             <div style={{
-              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+              background: "linear-gradient(135deg, var(--primary) 0%, #1e4f26 100%)",
               color: "white",
               padding: "24px 32px",
               display: "flex",
@@ -590,8 +543,8 @@ export default function Dashboard() {
                   <div style={{
                     width: "48px",
                     height: "48px",
-                    border: "4px solid #E5E7EB",
-                    borderTop: "4px solid #10B981",
+                    border: "4px solid var(--border)",
+                    borderTop: "4px solid var(--primary)",
                     borderRadius: "50%",
                     animation: "spin 1s linear infinite",
                     marginBottom: "24px"
@@ -631,7 +584,7 @@ export default function Dashboard() {
                       <div style={{
                               width: "48px",
                               height: "48px",
-                              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                              background: "linear-gradient(135deg, var(--primary) 0%, #1e4f26 100%)",
                               borderRadius: "12px",
                               display: "flex",
                               alignItems: "center",

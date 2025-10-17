@@ -14,18 +14,18 @@
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   --max-width: 1100px;
   --base-font-size: 16px;
-  /* Accent palette (green) */
-  --accent-50: #F0FFF4;
-  --accent-100: #ECFDF5;
-  --accent-200: #BBF7D0;
-  --accent-300: #86EFAC;
-  --accent-500: #10B981;
-  --accent-600: #059669;
-  --accent-700: #047857;
-  --text: #0f172a;
-  --muted: #6B7280;
-  --muted-2: #374151;
-  --border: #E5E7EB;
+  /* Accent palette (rootd green) */
+  --accent-50: #f0f4f1;
+  --accent-100: #e1e9e3;
+  --accent-200: #c3d3c7;
+  --accent-300: #a5bdab;
+  --accent-500: #2c5f34;
+  --accent-600: #244f2a;
+  --accent-700: #1c3f20;
+  --text: #212529;
+  --muted: #666666;
+  --muted-2: #495057;
+  --border: #e9ecef;
 }
 
 html, body, #root {
@@ -36,12 +36,71 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--text);
+  background: var(--bg);
   margin: 0;
   /* explicit base font size and comfortable line-height for readability */
   font-size: var(--base-font-size);
   line-height: 1.45;
+}
+
+/* Dashboard Layout Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .dashboard-grid .left-col,
+  .dashboard-grid .right-col {
+    order: 2;
+  }
+  
+  .dashboard-grid .center-col {
+    order: 1;
+  }
+}
+
+/* Modern Card Styling */
+.dashboard-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile Card Styling */
+.profile-card {
+  background: linear-gradient(135deg, var(--accent-50) 0%, #ffffff 100%);
+  border: 1px solid var(--accent-200);
+  border-radius: 16px;
+  padding: 32px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent-600));
 }
 
 .logo {

@@ -1,13 +1,15 @@
 /* src/index.css — light, crisp system */
 
 :root{
-  --bg: #F7F9FB;
+  --bg: #f8f9fa;
   --card: #FFFFFF;
-  --ink: #0D1113;
-  --muted: #5E6B77;
-  --hair: #E7EEF3;
-  --pill: #F4F7F9;
-  --green: #0FA958;
+  --ink: #212529;
+  --muted: #666666;
+  --hair: #e9ecef;
+  --pill: #f8f9fa;
+  --green: #2c5f34;
+  --primary: #2c5f34;
+  --secondary: #666666;
 }
 
 *{ box-sizing:border-box; }
@@ -43,31 +45,40 @@ body{
   background: #fff;
 }
 .input:focus{
-  border-color: #B7D8C7;
-  box-shadow: 0 0 0 3px rgba(15,169,88,.15);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(44, 95, 52, 0.15);
 }
 
 .btn{
   appearance: none;
-  border: 1px solid #D8E4EC;
-  background: #F8FAFB;
+  border: 2px solid var(--border);
+  background: #fff;
   height: 40px;
-  padding: 0 14px;
-  border-radius: 12px;
-  font-weight: 700;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform .04s ease, filter .12s ease;
+  transition: all 0.2s ease;
+  color: var(--secondary);
+  font-size: 14px;
 }
-.btn:hover{ filter: brightness(0.98); }
+.btn:hover{ 
+  border-color: var(--secondary);
+  background: var(--bg);
+}
 .btn:active{ transform: translateY(1px); }
 
 .btn-primary{
-  background: var(--green);
+  background: var(--primary);
   color: #fff;
-  border: 0;
-  box-shadow: 0 10px 22px rgba(15,169,88,.22);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(44, 95, 52, 0.25);
 }
-.btn-primary:hover{ filter: saturate(1.02) brightness(1.02); }
+.btn-primary:hover{ 
+  background: #1e4f26;
+  border-color: #1e4f26;
+  box-shadow: 0 6px 16px rgba(44, 95, 52, 0.35);
+}
 
 .subtle{ color: var(--muted); }
 a{ color: inherit; text-decoration: none; }

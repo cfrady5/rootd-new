@@ -4,6 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Helpful runtime debug: log the VITE_SUPABASE_URL the bundle was built with.
+// This prints only the URL (no secrets) and helps confirm what value was embedded
+// into the client during the Vercel build. Remove after debugging.
+/* eslint-disable no-console */
+console.info('[env] VITE_SUPABASE_URL =', url);
+/* eslint-enable no-console */
+
 export const HAS_SUPABASE = Boolean(url && key);
 
 let supabase;

@@ -22,14 +22,16 @@ export default function Signup() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <form onSubmit={submit} style={{ maxWidth: 420, margin: "0 auto", display: "grid", gap: 12 }}>
-        <h2>Sign up</h2>
-        {err && <div style={{ color: "#9b1c1c" }}>{err}</div>}
-        <input className="input" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button className="btn btn-primary" type="submit">Create Account</button>
-      </form>
+    <div className="page-container">
+      <div className="page-content">
+        <form onSubmit={submit} style={{ maxWidth: 420, margin: "0 auto", display: "grid", gap: 12 }}>
+          <h2>Sign up</h2>
+          {err && <div style={{ color: "#9b1c1c" }}>{err}</div>}
+          <input className="input" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <button className="btn btn-primary" type="submit">Create Account</button>
+        </form>
+      </div>
     </div>
   );
 }

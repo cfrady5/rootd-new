@@ -46,7 +46,7 @@ export default function NavBar() {
           {!session ? (
             <Link to="/signup" className="btn btn-primary">Sign Up</Link>
           ) : (
-            <Link to="/dashboard" className="btn">Dashboard</Link>
+            <Link to="/dashboard/profile" className="btn">Dashboard</Link>
           )}
 
           {/* Mobile hamburger */}

@@ -258,3 +258,58 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at timestamptz DEFAULT now()
 );
 
+-- Social media accounts table
+CREATE TABLE IF NOT EXISTS public.socials (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  platform text NOT NULL,
+  username text NOT NULL,
+  followers integer DEFAULT 0,
+  following integer DEFAULT 0,
+  posts integer DEFAULT 0,
+  engagement_rate decimal DEFAULT 0,
+  connected_at timestamptz DEFAULT now(),
+  last_refreshed timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(user_id, platform)
+);
+
+-- Enable row level security
+ALTER TABLE public.socials ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for socials (idempotent via pg_policies checks)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'socials' AND policyname = 'Users can view own socials'
+  ) THEN
+    CREATE POLICY "Users can view own socials" ON public.socials
+      FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'socials' AND policyname = 'Users can insert own socials'
+  ) THEN
+    CREATE POLICY "Users can insert own socials" ON public.socials
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'socials' AND policyname = 'Users can update own socials'
+  ) THEN
+    CREATE POLICY "Users can update own socials" ON public.socials
+      FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'socials' AND policyname = 'Users can delete own socials'
+  ) THEN
+    CREATE POLICY "Users can delete own socials" ON public.socials
+      FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END$$;
+

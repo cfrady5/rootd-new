@@ -4,13 +4,15 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import NavBar from "./components/NavBar.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import QuizPage from "./pages/QuizPage.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
+import DashboardLayout from "./pages/DashboardLayout.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Profile from "./pages/Profile.jsx";
 import DemoPage from "./pages/DemoPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
+import PricingPage from "./pages/PricingPage.jsx";
 import DirectorPortal from "./pages/DirectorPortal.jsx";
+import InstagramCallback from "./components/InstagramCallback.jsx";
 import { useAuth } from "./auth/AuthProvider.jsx";
 
 function ProtectedRoute({ children }) {
@@ -37,19 +39,30 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/director" element={<DirectorPortal />} />
 
           {/* Auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
+          {/* OAuth Callbacks */}
+          <Route 
+            path="/auth/instagram/callback" 
+            element={
+              <ProtectedRoute>
+                <InstagramCallback />
+              </ProtectedRoute>
+            } 
+          />
+
           {/* Protected */}
           <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
           <Route
-            path="/dashboard"
+            path="/dashboard/*"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardLayout />
               </ProtectedRoute>
             }
           />

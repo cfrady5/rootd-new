@@ -10,6 +10,22 @@ export default function MatchCard({ m, onSelect, onSave }) {
     
   const matchScore = typeof m.match_score === "number" ? Math.round(m.match_score * 100) : 0;
   
+  // Calculate distance if not already provided
+  const distanceMiles = m.distance_miles || 
+    (m.distance_meters ? (m.distance_meters / 1609.34).toFixed(1) : null);
+  
+  // Debug - log once per component mount
+  React.useEffect(() => {
+    console.log('MatchCard received:', {
+      name: m.name,
+      has_distance_miles: !!m.distance_miles,
+      has_distance_meters: !!m.distance_meters,
+      distance_miles_value: m.distance_miles,
+      distance_meters_value: m.distance_meters,
+      calculated: distanceMiles
+    });
+  }, [m.name, m.distance_miles, m.distance_meters, distanceMiles]);
+  
   const getMatchScoreColor = (score) => {
     if (score >= 80) return { bg: "#DCFCE7", text: "#166534", border: "#BBF7D0" };
     if (score >= 60) return { bg: "#D1FAE5", text: "#065F46", border: "#86EFAC" };
@@ -93,7 +109,8 @@ export default function MatchCard({ m, onSelect, onSave }) {
           display: "flex", 
           alignItems: "center", 
           gap: "8px", 
-          marginBottom: "8px" 
+          marginBottom: "8px",
+          flexWrap: "wrap"
         }}>
           <span style={{ fontSize: "16px" }}>
             {getCategoryIcon(m.category)}
@@ -118,6 +135,29 @@ export default function MatchCard({ m, onSelect, onSave }) {
               }}>
                 ⭐ {rating}
               </div>
+            </>
+          )}
+          {distanceMiles ? (
+            <>
+              <span style={{ color: "#E5E7EB" }}>•</span>
+              <span style={{ 
+                fontSize: "14px", 
+                color: "#6B7280",
+                fontWeight: "500"
+              }}>
+                📍 {distanceMiles} mi
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ color: "#E5E7EB" }}>•</span>
+              <span style={{ 
+                fontSize: "12px", 
+                color: "#9CA3AF",
+                fontStyle: "italic"
+              }}>
+                Distance unavailable
+              </span>
             </>
           )}
         </div>

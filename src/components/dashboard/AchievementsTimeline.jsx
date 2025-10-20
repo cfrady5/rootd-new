@@ -13,7 +13,7 @@ export default function AchievementsTimeline(){
         {loading && <div>Loading…</div>}
         <div style={{position:'relative',paddingLeft:16}}>
           <div style={{position:'absolute',left:7,top:0,bottom:0,width:2,background:'#f1f5f4'}} />
-          {achievements?.map((a,i)=> (
+          {achievements?.map((a)=> (
             <div key={a.id} style={{padding:'8px 0 8px 24px'}}>
               <div style={{fontWeight:700}}>{a.title}</div>
               <div style={{color:'var(--muted)'}}>{a.date}</div>

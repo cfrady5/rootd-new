@@ -255,7 +255,7 @@ export default function QuizPage() {
       if (!out || !out.ok) throw new Error(out?.error || "Function error");
 
   try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
-      navigate("/dashboard", { state: { rootd_score: out.rootd_score, components: out.components } });
+      navigate("/dashboard/matches", { state: { rootd_score: out.rootd_score, components: out.components } });
     } catch (e) {
       setError(e.message || "There was a problem submitting your answers.");
     } finally {
@@ -394,7 +394,8 @@ export default function QuizPage() {
   };
 
   return (
-    <div className="container" style={{ padding: "28px 16px", maxWidth: 900 }}>
+    <div className="page-container">
+      <div className="page-content" style={{ maxWidth: 900 }}>
       <div style={{ marginBottom: 16 }}>
         <h1 className="h1" style={{ margin: 0 }}>NIL Intelligence Quiz</h1>
         <div className="subtle" style={{ marginTop: 6 }}>
@@ -448,6 +449,7 @@ export default function QuizPage() {
           </div>
         )}
       </section>
+    </div>
     </div>
   );
 }

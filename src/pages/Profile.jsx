@@ -107,7 +107,8 @@ export default function Profile() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="page-container">
+      <div className="page-content">
       <h2>Athlete Profile</h2>
       {msg && (
         <div style={{ 
@@ -313,6 +314,7 @@ export default function Profile() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

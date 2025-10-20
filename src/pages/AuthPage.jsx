@@ -49,8 +49,8 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ padding: "24px 0 64px" }}>
-      <div className="container" style={{ display: "grid", placeItems: "center", minHeight: "calc(100vh - 120px)" }}>
+    <div className="page-container">
+      <div className="page-content" style={{ display: "grid", placeItems: "center", minHeight: "calc(100vh - 120px)" }}>
         <div
           className="card"
           style={{

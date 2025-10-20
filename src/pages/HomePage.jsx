@@ -1,26 +1,34 @@
 // src/pages/HomePage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import FooterCTA from "../components/FooterCTA.jsx";
 
 function MetricCard({ label, value, hint }) {
+  const [isHovered, setIsHovered] = useState(false);
+  
   return (
     <div
       style={{
-        padding: "22px 22px 18px",
-        borderRadius: 16,
+        padding: "32px 28px",
+        borderRadius: 18,
         background: "#fff",
         border: "1px solid #e9edf1",
-        boxShadow: "0 10px 28px rgba(15,23,42,.06)",
+        boxShadow: isHovered ? "0 12px 32px rgba(15,23,42,.08)" : "0 8px 24px rgba(15,23,42,.05)",
         flex: "1 1 0",
         minWidth: 260,
         textAlign: "center",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+        cursor: "default"
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 36, fontWeight: 900, color: "var(--text)", letterSpacing: "-.02em" }}>
+      <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+      <div style={{ fontSize: 48, fontWeight: 900, color: "#0f172a", letterSpacing: "-0.03em", lineHeight: 1 }}>
         {value}
       </div>
-      {hint && <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>{hint}</div>}
+      {hint && <div style={{ marginTop: 12, fontSize: 13, color: "#9ca3af", fontWeight: 400 }}>{hint}</div>}
     </div>
   );
 }
@@ -192,7 +200,7 @@ export default function HomePage() {
     n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
   return (
-    <div style={{ background: "#f5f7fa" }}>
+    <div className="page-container" style={{ background: "#f5f7fa" }}>
       {/* HERO */}
       <section
         style={{
@@ -201,9 +209,9 @@ export default function HomePage() {
           alignItems: "center",
           justifyContent: "center",
           textAlign: "center",
-          minHeight: "65vh",
+          minHeight: "75vh",
           background: "#f5f7fa",
-          padding: "80px 24px 40px",
+          padding: "80px 24px 80px",
         }}
       >
         <div
@@ -214,59 +222,72 @@ export default function HomePage() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 18, color: "var(--muted)", marginBottom: 12 }}>
-            <span style={{ color: "var(--accent-500)", fontWeight: 800 }}>Rootd</span> in Community. Driven by{" "}
-            <strong>athletes</strong>.
+          <div style={{ 
+            fontSize: 18, 
+            color: "#6b7280", 
+            marginBottom: 32,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            fontWeight: 600
+          }}>
+            <span style={{ color: "var(--accent-500)", fontWeight: 700 }}>Rootd</span> in Community. Driven by{" "}
+            <strong>athletes</strong>
           </div>
 
           <h1
             style={{
-              fontSize: 56,
+              fontSize: 64,
               fontWeight: 900,
               color: "#0f172a",
-              margin: "0 auto",
-              lineHeight: 1.05,
+              margin: "0 auto 32px",
+              lineHeight: 1.1,
+              letterSpacing: "-0.03em",
               whiteSpace: "nowrap",
               textAlign: "center",
             }}
           >
-            Turn your story into real NIL opportunities.
+            Turn your story into real NIL opportunities
           </h1>
 
           <p
             style={{
-              marginTop: 18,
-              fontSize: 20,
-              color: "#475569",
-              lineHeight: 1.5,
+              marginTop: 0,
+              marginBottom: 48,
+              fontSize: 28,
+              color: "#64748b",
+              lineHeight: 1.6,
               whiteSpace: "nowrap",
               textAlign: "center",
+              fontWeight: 400
             }}
           >
             Take a smart, 30-question quiz and get matched with local businesses that fit your brand
             and values.
           </p>
 
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 32 }}>
+          <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 0 }}>
             <button
               onClick={() => navigate("/quiz")}
                 style={{
-                  padding: "14px 28px",
+                  padding: "18px 40px",
                   borderRadius: 14,
                   background: "var(--accent-500)",
                   color: "#fff",
-                  fontWeight: 800,
-                  fontSize: 16,
+                  fontWeight: 600,
+                  fontSize: 17,
                   border: "none",
-                  boxShadow: "0 8px 24px rgba(22,163,74,.25)",
-                  transition: "all .2s ease",
+                  boxShadow: "0 4px 16px rgba(44, 95, 52, 0.25)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  cursor: "pointer"
                 }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.boxShadow = "0 10px 28px rgba(22,163,74,.35)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,.25)")
-              }
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(44, 95, 52, 0.35)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "0 4px 16px rgba(44, 95, 52, 0.25)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
             >
               Take the Quiz
             </button>
@@ -274,14 +295,27 @@ export default function HomePage() {
             <Link
               to="/demo"
               style={{
-                padding: "14px 28px",
+                padding: "18px 40px",
                 borderRadius: 14,
-                background: "#fff",
+                background: "transparent",
                 color: "#0f172a",
-                fontWeight: 800,
-                fontSize: 16,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 2px 8px rgba(0,0,0,.04)",
+                fontWeight: 600,
+                fontSize: 17,
+                border: "2px solid #e5e7eb",
+                boxShadow: "none",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                cursor: "pointer"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f9fafb";
+                e.currentTarget.style.borderColor = "#d1d5db";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "#e5e7eb";
               }}
             >
               View Demo
@@ -293,12 +327,12 @@ export default function HomePage() {
       {/* KPI Section */}
       <section
         style={{
-          maxWidth: 1100,
+          maxWidth: 1200,
           margin: "0 auto",
-          padding: "0 24px 70px",
+          padding: "0 40px 100px",
           display: "flex",
           justifyContent: "center",
-          gap: 20,
+          gap: 32,
           flexWrap: "wrap",
         }}
       >
@@ -313,6 +347,9 @@ export default function HomePage() {
 
       {/* Testimonials */}
       <Carousel />
+
+      {/* Footer CTA */}
+      <FooterCTA />
     </div>
   );
 }

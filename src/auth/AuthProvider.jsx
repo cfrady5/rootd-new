@@ -22,6 +22,7 @@ export default function AuthProvider({ children }) {
   const value = {
     supabase,
     session,
+    loading,
     token: session?.access_token || null,
     signIn: async (email, password) => {
       try {

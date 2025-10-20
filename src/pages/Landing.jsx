@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "../App.css";
+import FooterCTA from "../components/FooterCTA.jsx";
 
 function Hero() {
   return (
@@ -118,11 +119,14 @@ function SimpleFooter() {
 
 export default function Landing() {
   return (
-    <div className="page landing-page">
-      <Hero />
-      <Features />
-      <FinalCta />
-      <SimpleFooter />
+    <div className="page-container landing-page">
+      <div className="page-content" style={{ padding: 0 }}>
+        <Hero />
+        <Features />
+        <FinalCta />
+        <SimpleFooter />
+      </div>
+      <FooterCTA />
     </div>
   );
 }

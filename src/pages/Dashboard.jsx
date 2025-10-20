@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import supabase from "../lib/supabaseClient.js";
-import { runProcessQuiz, getMatches } from "../lib/api.js";
+import { getMatches } from "../lib/api.js";
 import MatchCard from "../components/MatchCard.jsx";
 import HeaderBar from "../components/dashboard/HeaderBar.jsx";
 import MetricCards from "../components/dashboard/MetricCards.jsx";
@@ -14,7 +14,7 @@ import BusinessMatches from "../components/dashboard/BusinessMatches.jsx";
 import BrandSummary from "../components/dashboard/BrandSummary.jsx";
 import GoalsPreferences from "../components/dashboard/GoalsPreferences.jsx";
 import SidebarPanel from "../components/dashboard/SidebarPanel.jsx";
-import ToastProvider from "../components/dashboard/Toasts.jsx";
+// Toasts are provided in DashboardLayout
 
   // hair color constant unused; remove to satisfy lint
 
@@ -25,12 +25,18 @@ export default function Dashboard() {
   const { session } = (useAuth?.() ?? {});
   const athleteId = session?.user?.id || null;
 
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [score, setScore] = useState(typeof navScore === "number" ? navScore : null);
   const [matches, setMatches] = useState([]);
   const [profileData, setProfileData] = useState(null);
-  const [error, setError] = useState("");
+  // const [error, setError] = useState("");
   const [pitchModal, setPitchModal] = useState(null); // { business, pitch, isGenerating }
+  const [refreshMatchesFn, setRefreshMatchesFn] = useState(null);
+
+  // Callback to capture refresh function from BusinessMatches
+  const handleRefreshAvailable = useCallback((refreshFn) => {
+    setRefreshMatchesFn(() => refreshFn);
+  }, []);
 
   // Load latest score if not passed via navigation
   useEffect(() => {
@@ -48,23 +54,24 @@ export default function Dashboard() {
         if (err) throw err;
         if (!cancelled && typeof data?.rootd_score === "number") setScore(data.rootd_score);
       } catch (e) {
-        if (!cancelled) setError(e.message || "Failed to load score.");
+  if (!cancelled) console.warn(e.message || "Failed to load score.");
       }
     })();
     return () => { cancelled = true; };
   }, [athleteId, score]);
 
   const fetchMatches = useCallback(async () => {
-    if (!athleteId) return;
-    setLoading(true);
-    setError("");
+    if (!athleteId) {
+      console.log("fetchMatches: No athleteId");
+      return;
+    }
+  console.log("fetchMatches: Starting refresh...");
     try {
       const data = await getMatches(supabase, athleteId);
+      console.log("fetchMatches: Got", data?.length || 0, "matches");
       setMatches(data || []);
     } catch (e) {
-      setError(e.message || "Failed to load matches.");
-    } finally {
-      setLoading(false);
+      console.error("fetchMatches error:", e);
     }
   }, [athleteId]);
 
@@ -72,293 +79,27 @@ export default function Dashboard() {
 
   // fetch profile
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
     (async () => {
       if (!athleteId) return;
       try {
         const { data } = await supabase.from("profiles").select("*").eq("id", athleteId).maybeSingle();
         if (mounted) setProfileData(data || null);
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     })();
     return () => { mounted = false; };
   }, [athleteId]);
 
-  // Run matching by reusing latest normalized row through process-quiz (works even with empty body if you added fallback)
-  const runMatch = async () => {
-    if (!athleteId) return;
-    setLoading(true);
-    setError("");
-    try {
-      // try to get user location and call process-quiz with location and default categories
-      const geo = await new Promise((res) => {
-        if (!navigator.geolocation) return res(null);
-        navigator.geolocation.getCurrentPosition((p) => res(p.coords), () => res(null));
-      });
-
-      const { data: { session: fresh } } = await supabase.auth.getSession();
-      const jwt = fresh?.access_token;
-      const payload = {};
-      if (geo) {
-        payload.lat = geo.latitude;
-        payload.lng = geo.longitude;
-        payload.preferred_radius_miles = 10;
-        payload.categories = ["coffee", "gym", "restaurant", "fitness", "food"];
-      } else {
-        // Fallback with mock location (San Francisco) for testing
-        payload.lat = 37.7749;
-        payload.lng = -122.4194;
-        payload.preferred_radius_miles = 10;
-        payload.categories = ["coffee", "gym", "restaurant", "fitness", "food"];
-      }
-      
-      const out = await runProcessQuiz(jwt, { answers: payload });
-      
-      if (!out || !out.ok) throw new Error(out?.error || "Match failed");
-      
-      // Insert matches directly from client (temporary until server functions are deployed)
-      if (out.matches && out.matches.length > 0) {
-        console.log("Inserting", out.matches.length, "matches...");
-        try {
-          // Clean matches to only include columns that exist in the database
-          const cleanMatches = out.matches.map(match => ({
-            athlete_id: match.athlete_id,
-            business_place_id: match.business_place_id,
-            name: match.name,
-            source: match.source,
-            match_score: match.match_score
-          }));
-
-          const { data: _data, error } = await supabase
-            .from("business_matches")
-            .upsert(cleanMatches, { onConflict: "athlete_id,business_place_id" });
-
-          if (error) {
-            console.error("Matches insert error:", error);
-          } else {
-            console.log("Successfully inserted", cleanMatches.length, "matches");
-          }
-        } catch (insertError) {
-          console.error("Insert failed:", insertError);
-        }
-      }
-      
-      await fetchMatches();
-    } catch (err) {
-      console.error("Match run error:", err);
-      setError(err.message || "Match run failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Save match (idempotent upsert). Safe if you added a boolean 'saved' column. If not present, the update will no-op or error silently.
-  const handleSave = async ({ athlete_id, business_place_id, name }) => {
-    try {
-      await supabase
-        .from("business_matches")
-        .upsert([{ athlete_id, business_place_id, name, saved: true }], { onConflict: "athlete_id,business_place_id" });
-      await fetchMatches();
-    } catch {
-      // non-fatal
-    }
-  };
-
-  // Pitch action via Edge Function
-  const handlePitch = async (payload) => {
-    // Open modal with loading state
-    setPitchModal({
-      business: payload,
-      pitch: null,
-      isGenerating: true
-    });
-
-    try {
-      const { data: { session: fresh } } = await supabase.auth.getSession();
-      const jwt = fresh?.access_token;
-      const base = import.meta.env.VITE_SUPABASE_URL;
-      
-      const res = await fetch(`${base}/functions/v1/generate-pitch`, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${jwt}` },
-        body: JSON.stringify(payload),
-      });
-      
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || !out.ok) {
-        throw new Error(out.error || `Pitch error ${res.status}`);
-      }
-      
-      // Update modal with generated pitch
-      setPitchModal(prev => ({
-        ...prev,
-        pitch: out.pitch || "Pitch generated successfully!",
-        isGenerating: false
-      }));
-      
-    } catch (e) {
-      // Fallback to mock pitch if function fails
-      console.error("Pitch generation failed, using fallback:", e);
-      const businessName = payload.name || "this business";
-      const fallbackPitch = `Hi ${businessName}! I'm an athlete with a growing social media presence and I'd love to collaborate with you. I believe we could create great content together that showcases your brand to my engaged audience. Let's discuss a potential partnership!`;
-      
-      setPitchModal(prev => ({
-        ...prev,
-        pitch: fallbackPitch,
-        isGenerating: false,
-        isFallback: true
-      }));
-    }
-  };
-
   return (
     <ToastProvider>
-    <div style={{ 
-      minHeight: "100vh",
-      background: "var(--bg)",
-      padding: "24px"
+    <div className="page-container" style={{ 
+      background: "var(--bg)"
     }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+      <div className="page-content">
 
-        <HeaderBar />
+        <HeaderBar onRefreshMatches={refreshMatchesFn} />
 
         <MetricCards />
-        {/* Action Buttons Section */}
-        <div className="dashboard-card" style={{ marginBottom: "24px" }}>
-          <div style={{ 
-            display: "flex", 
-            gap: "12px", 
-            flexWrap: "wrap",
-            marginBottom: error ? "20px" : "0"
-          }}>
-            <button 
-              onClick={runMatch} 
-              disabled={loading || !athleteId}
-              style={{
-                background: loading ? "var(--secondary)" : "linear-gradient(135deg, var(--primary) 0%, #1e4f26 100%)",
-                color: "white",
-                border: "none",
-                padding: "14px 28px",
-                borderRadius: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: loading ? "none" : "0 4px 14px 0 rgba(44, 95, 52, 0.25)",
-                transform: loading ? "none" : "translateY(0)",
-                transition: "all 0.2s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-              onMouseOver={e => {
-                if (!loading) {
-                  e.target.style.transform = "translateY(-2px)";
-                  e.target.style.boxShadow = "0 8px 25px 0 rgba(44, 95, 52, 0.32)";
-                }
-              }}
-              onMouseOut={e => {
-                if (!loading) {
-                  e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 4px 14px 0 rgba(44, 95, 52, 0.25)";
-                }
-              }}
-            >
-              {loading ? (
-                <>
-                  <div style={{
-                    width: "16px",
-                    height: "16px",
-                    border: "2px solid rgba(255,255,255,0.3)",
-                    borderTop: "2px solid white",
-                    borderRadius: "50%",
-                    animation: "spin 1s linear infinite"
-                  }} />
-                  Finding Matches...
-                </>
-              ) : (
-                <>
-                  🎯 Find New Matches
-                </>
-              )}
-            </button>
-            
-            <button 
-              onClick={fetchMatches}
-              disabled={loading}
-              style={{
-                background: "white",
-                color: "var(--secondary)",
-                border: "2px solid var(--border)",
-                padding: "12px 24px",
-                borderRadius: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.2s ease"
-              }}
-              onMouseOver={e => {
-                if (!loading) {
-                  e.target.style.borderColor = "var(--secondary)";
-                  e.target.style.background = "var(--bg)";
-                }
-              }}
-              onMouseOut={e => {
-                if (!loading) {
-                  e.target.style.borderColor = "var(--border)";
-                  e.target.style.background = "white";
-                }
-              }}
-            >
-              🔄 Refresh
-            </button>
-            
-            <a 
-              href="/quiz"
-              style={{
-                background: "white",
-                color: "var(--secondary)",
-                border: "2px solid var(--border)",
-                padding: "12px 24px",
-                borderRadius: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                textDecoration: "none",
-                transition: "all 0.2s ease",
-                display: "flex",
-                alignItems: "center"
-              }}
-              onMouseOver={e => {
-                e.target.style.borderColor = "var(--secondary)";
-                e.target.style.background = "var(--bg)";
-              }}
-              onMouseOut={e => {
-                e.target.style.borderColor = "var(--border)";
-                e.target.style.background = "white";
-              }}
-            >
-              📝 Retake Quiz
-            </a>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              background: "linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)",
-              border: "1px solid #fc8181",
-              color: "#c53030",
-              padding: "16px",
-              borderRadius: "12px",
-              fontSize: "14px",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px"
-            }}>
-              ⚠️ {error}
-            </div>
-          )}
-        </div>
 
         {/* Stats Section */}
         <div style={{
@@ -433,7 +174,7 @@ export default function Dashboard() {
           </aside>
 
           <main className="center-col">
-            <BusinessMatches />
+            <BusinessMatches onRefreshAvailable={handleRefreshAvailable} />
           </main>
 
           <aside className="right-col">

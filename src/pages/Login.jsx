@@ -44,7 +44,8 @@ export default function Login() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-container">
+      <div className="page-content">
       <form onSubmit={submit} style={{ maxWidth: 420, margin: "0 auto", display: "grid", gap: 12 }}>
         <h2>Log in</h2>
         {err && <div style={{ color: "#9b1c1c" }}>{err}</div>}
@@ -65,6 +66,7 @@ export default function Login() {
           {JSON.stringify(debugResp, null, 2)}
         </pre>
       )}
+      </div>
     </div>
   );
 }

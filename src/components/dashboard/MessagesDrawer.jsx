@@ -2,7 +2,7 @@ import React from 'react';
 import { useMessages } from '../../hooks/useMessages';
 
 export default function MessagesDrawer({ open, onClose }) {
-  const { threads, loading, sendMessage } = useMessages();
+  const { threads, loading } = useMessages();
   return (
     <div role="dialog" aria-hidden={!open} style={{width:360,padding:12,display: open ? 'block' : 'none'}}>
       <div style={{display:'flex',justifyContent:'space-between'}}>

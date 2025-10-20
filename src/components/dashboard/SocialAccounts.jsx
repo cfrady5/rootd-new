@@ -30,4 +30,4 @@ export default function SocialAccounts() {
   );
 }
 
-function varOr(name, fallback) { try { return getComputedStyle(document.documentElement).getPropertyValue(name) || fallback; } catch(e) { return fallback; } }
+function varOr(name, fallback) { try { return getComputedStyle(document.documentElement).getPropertyValue(name) || fallback; } catch { return fallback; } }

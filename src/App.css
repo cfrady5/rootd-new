@@ -82,6 +82,29 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Navbar Buffer - Ensures content isn't hidden behind fixed navbar */
+.page-container {
+  padding-top: 72px; /* Adjusted for navbar height (56px) + extra buffer */
+  min-height: 100vh;
+}
+
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .page-container {
+    padding-top: 68px; /* Slightly less padding on mobile */
+  }
+  
+  .page-content {
+    padding: 16px;
+  }
+}
+
 /* Profile Card Styling */
 .profile-card {
   background: linear-gradient(135deg, var(--accent-50) 0%, #ffffff 100%);

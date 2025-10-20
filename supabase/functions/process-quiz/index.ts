@@ -1,7 +1,7 @@
 // Computes Rootd score, saves quiz_responses, fetches matches, upserts business_matches
 // deno-lint-ignore-file no-explicit-any
 // edge runtime types provided by Supabase during deployment
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 type Json = Record<string, any> | any[] | string | number | boolean | null;
 
@@ -107,11 +107,14 @@ Deno.serve(async (req) => {
   if (qErr) return json({ ok: false, error: "quiz_insert_failed", detail: qErr.message }, 500);
 
   let matches: any[] = [];
-  if (typeof normalized.lat === "number" && typeof normalized.lng === "number") {
+  // Fallback to a default location when lat/lng are missing so users still get matches
+  const hasGeo = typeof normalized.lat === "number" && typeof normalized.lng === "number";
+  const origin = hasGeo ? { lat: normalized.lat, lng: normalized.lng } : { lat: 37.7749, lng: -122.4194 };
+  if (hasGeo || !hasGeo) {
     const finderUrl = `${SUPABASE_URL}/functions/v1/find-businesses`;
     const finderBody = {
-      lat: normalized.lat,
-      lng: normalized.lng,
+      lat: origin.lat,
+      lng: origin.lng,
       radiusMiles: normalized.preferred_radius_miles ?? 10,
       topics: normalized.categories,
     };

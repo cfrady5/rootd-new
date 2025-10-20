@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import HeaderBar from '../components/dashboard/HeaderBar.jsx';
 import MetricCards from '../components/dashboard/MetricCards.jsx';
 import BusinessMatches from '../components/dashboard/BusinessMatches.jsx';
+import UserSummary from '../components/dashboard/UserSummary.jsx';
 import { useToasts } from '../components/dashboard/useToasts.js';
 
 export default function MatchesPage() {
@@ -68,8 +69,11 @@ export default function MatchesPage() {
           </p>
         </div>
 
-  {/* Progress Overview */}
-  <HeaderBar onRefreshMatches={onHeaderRefresh} />
+        {/* User AI Summary */}
+        <UserSummary />
+
+        {/* Progress Overview */}
+        <HeaderBar onRefreshMatches={onHeaderRefresh} />
         
         {/* Match Metrics */}
         <MetricCards />

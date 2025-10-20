@@ -1,0 +1,2 @@
+[functions.generate-user-summary]
+verify_jwt = true

@@ -1,8 +1,22 @@
 import React from 'react';
 import ProfileOverview from '../components/dashboard/ProfileOverview.jsx';
 import SocialAnalytics from '../components/dashboard/SocialAnalytics.jsx';
+import { useAuth } from '../auth/AuthProvider.jsx';
 
 export default function MyProfilePage() {
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    if (window.confirm('Are you sure you want to sign out?')) {
+      try {
+        await signOut();
+        // The auth provider will handle redirecting to login
+      } catch (error) {
+        console.error('Error signing out:', error);
+        alert('Failed to sign out. Please try again.');
+      }
+    }
+  };
   return (
     <div className="page-container">
       <div className="page-content">
@@ -214,6 +228,80 @@ export default function MyProfilePage() {
                 </label>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Account Actions */}
+        <div style={{
+          background: 'white',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-xl)',
+          border: '1px solid var(--hair)',
+          boxShadow: 'var(--shadow-md)',
+          marginBottom: 'var(--space-xl)'
+        }}>
+          <h2 style={{
+            fontSize: '22px',
+            fontWeight: '700',
+            color: 'var(--ink)',
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-sm)'
+          }}>
+            🚪 Account Actions
+          </h2>
+          
+          <div style={{
+            padding: 'var(--space-lg)',
+            background: 'var(--bg)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--hair)'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: 'var(--ink)',
+              margin: '0 0 12px 0'
+            }}>
+              Sign Out
+            </h3>
+            <p style={{
+              fontSize: '15px',
+              color: 'var(--muted)',
+              margin: '0 0 16px 0',
+              lineHeight: '1.5'
+            }}>
+              Sign out of your account. You'll be redirected to the login page.
+            </p>
+            
+            <button
+              onClick={handleSignOut}
+              style={{
+                background: '#DC2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 24px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-sm)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#B91C1C';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = '#DC2626';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              🚪 Sign Out
+            </button>
           </div>
         </div>
       </div>

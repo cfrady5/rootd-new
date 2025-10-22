@@ -1,29 +1,71 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import "../App.css";
 import FooterCTA from "../components/FooterCTA.jsx";
+import { Button } from "../components/PremiumComponents";
+import { ArrowRight, PlayCircle } from "lucide-react";
 
 function Hero() {
+  const navigate = useNavigate();
+  
   return (
     <section className="hero">
       <div className="container hero-grid">
-        <div className="hero-copy">
-          <div className="badge">Rootd in Community</div>
+        <motion.div 
+          className="hero-copy"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <motion.div 
+            className="badge"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+          >
+            Rootd in Community
+          </motion.div>
           <h1 className="h1">Get partnered. Build your brand. Earn more.</h1>
           <p className="lead">Rootd helps student-athletes and creators find sponsorships with local and national brands using performance signals and real-world reach.</p>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
-            <Link to="/signup" className="btn btn-cta">Get Early Access</Link>
-            <Link to="/demo" className="btn btn-ghost">Request Demo</Link>
-          </div>
+          <motion.div 
+            style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            <Button 
+              onClick={() => navigate("/signup")} 
+              variant="primary"
+              size="lg"
+              icon={ArrowRight}
+            >
+              Get Early Access
+            </Button>
+            <Button 
+              onClick={() => navigate("/demo")} 
+              variant="ghost"
+              size="lg"
+              icon={PlayCircle}
+            >
+              Request Demo
+            </Button>
+          </motion.div>
 
           <div className="trust-row" aria-hidden>
             <div>Trusted by college teams & clubs</div>
             <div style={{ opacity: 0.8, fontSize: 13 }}>Beta — free for early partners</div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="hero-visual" aria-hidden>
+        <motion.div 
+          className="hero-visual" 
+          aria-hidden
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+        >
           <div className="card soft">
             <h4 style={{ margin: 0 }}>Example Match</h4>
             <p style={{ marginTop: 8, color: "var(--muted-2)" }}>Arlington Apparel — Local sportswear brand</p>
@@ -32,7 +74,7 @@ function Hero() {
               <div style={{ background: "#ECFDF5", color: "#065F46", padding: "6px 10px", borderRadius: 8, fontWeight: 800 }}>86</div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -78,18 +120,34 @@ function Features() {
 }
 
 function FinalCta() {
+  const navigate = useNavigate();
+  
   return (
     <section className="final-cta">
-      <div className="container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <motion.div 
+        className="container" 
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
         <div>
           <h3 style={{ margin: 0 }}>Ready to get matched?</h3>
           <p style={{ margin: 0, opacity: 0.9 }}>Sign up for early access and we'll prioritize you for our pilot program.</p>
         </div>
 
         <div>
-          <Link to="/signup" className="btn btn-cta">Join the Pilot</Link>
+          <Button 
+            onClick={() => navigate("/signup")} 
+            variant="primary"
+            size="lg"
+            icon={ArrowRight}
+          >
+            Join the Pilot
+          </Button>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

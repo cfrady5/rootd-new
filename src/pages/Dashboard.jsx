@@ -1,12 +1,12 @@
 // /src/pages/Dashboard.jsx — updated to show matches with MatchCard and actions
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import supabase from "../lib/supabaseClient.js";
 import { getMatches } from "../lib/api.js";
 import MatchCard from "../components/MatchCard.jsx";
 import HeaderBar from "../components/dashboard/HeaderBar.jsx";
-import MetricCards from "../components/dashboard/MetricCards.jsx";
 import ProfileOverview from "../components/dashboard/ProfileOverview.jsx";
 import AchievementsTimeline from "../components/dashboard/AchievementsTimeline.jsx";
 import SocialAnalytics from "../components/dashboard/SocialAnalytics.jsx";
@@ -14,6 +14,8 @@ import BusinessMatches from "../components/dashboard/BusinessMatches.jsx";
 import BrandSummary from "../components/dashboard/BrandSummary.jsx";
 import GoalsPreferences from "../components/dashboard/GoalsPreferences.jsx";
 import SidebarPanel from "../components/dashboard/SidebarPanel.jsx";
+import { StatCard } from "../components/PremiumComponents";
+import { TrendingUp, Target, Award } from "lucide-react";
 // Toasts are provided in DashboardLayout
 
   // hair color constant unused; remove to satisfy lint
@@ -92,75 +94,48 @@ export default function Dashboard() {
 
   return (
     <ToastProvider>
-    <div className="page-container" style={{ 
-      background: "var(--bg)"
-    }}>
-      <div className="page-content">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{ 
+        background: "#f9fafb",
+        minHeight: "100vh",
+        padding: "24px"
+      }}
+    >
+      <div style={{
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
 
         <HeaderBar onRefreshMatches={refreshMatchesFn} />
 
-        <MetricCards />
-
-        {/* Stats Section */}
+        {/* Stats Section - Premium StatCards with Real Data */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
           gap: "20px",
           marginBottom: "32px"
         }}>
-          <div className="dashboard-card" style={{ textAlign: "center" }}>
-            <div style={{ 
-              fontSize: "36px", 
-              fontWeight: "700", 
-              color: "var(--primary)", 
-              marginBottom: "8px" 
-            }}>
-              {matches.length}
-            </div>
-            <div style={{ 
-              fontSize: "16px", 
-              color: "var(--secondary)", 
-              fontWeight: "600" 
-            }}>
-              Total Matches
-            </div>
-          </div>
-          
-          <div className="dashboard-card" style={{ textAlign: "center" }}>
-            <div style={{ 
-              fontSize: "36px", 
-              fontWeight: "700", 
-              color: "var(--primary)", 
-              marginBottom: "8px" 
-            }}>
-              {matches.filter(m => m.match_score > 0.7).length}
-            </div>
-            <div style={{ 
-              fontSize: "16px", 
-              color: "var(--secondary)", 
-              fontWeight: "600" 
-            }}>
-              High-Quality Matches
-            </div>
-          </div>
+          <StatCard
+            label="Total Matches"
+            value={matches.length}
+            icon={TrendingUp}
+          />
 
-          <div className="dashboard-card" style={{ textAlign: "center" }}>
-            <div style={{ 
-              fontSize: "36px", 
-              fontWeight: "700", 
-              color: "var(--primary)", 
-              marginBottom: "8px" 
-            }}>
-              {matches.length > 0 ? Math.round((matches.reduce((sum, m) => sum + (m.match_score || 0), 0) / matches.length) * 100) : 0}%
-            </div>
-            <div style={{ 
-              fontSize: "16px", 
-              color: "var(--secondary)", 
-              fontWeight: "600" 
-            }}>
-              Avg Match Score
-            </div>
-          </div>
+          <StatCard
+            label="High-Quality Matches"
+            value={matches.filter(m => m.match_score > 0.7).length}
+            icon={Target}
+          />
+
+          <StatCard
+            label="Avg Match Score"
+            value={`${matches.length > 0 ? Math.round((matches.reduce((sum, m) => sum + (m.match_score || 0), 0) / matches.length) * 100) : 0}%`}
+            icon={Award}
+          />
         </div>
 
         {/* Dashboard main layout: responsive 3/2/1 columns */}
@@ -497,7 +472,7 @@ export default function Dashboard() {
           }
         }
       `}</style>
-    </div>
+    </motion.div>
     </ToastProvider>
   );
 }

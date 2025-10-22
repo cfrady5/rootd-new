@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAchievements } from '../../hooks/useAchievements';
+import { SkeletonText } from '../SkeletonLoaders.jsx';
 
 export default function Achievements() {
   const { achievements, loading, addAchievement } = useAchievements();
@@ -21,15 +23,25 @@ export default function Achievements() {
         <button className="btn" onClick={() => setOpen(true)}>Add Achievement</button>
       </div>
 
-      {loading && <div>Loading…</div>}
+      {loading && (
+        <div style={{marginTop:12}}>
+          <SkeletonText lines={3} />
+        </div>
+      )}
       {!loading && achievements?.length === 0 && <div style={{marginTop:8,color:'var(--muted)'}}>No achievements yet</div>}
 
       <div style={{marginTop:12}}>
-        {achievements?.map(a => (
-          <div key={a.id} style={{padding:'8px 0',borderLeft:'2px solid #f0f0f0',marginBottom:8}}>
+        {achievements?.map((a, index) => (
+          <motion.div
+            key={a.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1, duration: 0.3 }}
+            style={{padding:'8px 0',borderLeft:'2px solid #f0f0f0',marginBottom:8}}
+          >
             <div style={{fontWeight:700}}>{a.title}</div>
             <div style={{color:'var(--muted)'}}>{a.type} • {a.date}</div>
-          </div>
+          </motion.div>
         ))}
       </div>
 

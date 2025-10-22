@@ -1,11 +1,15 @@
 // /src/pages/QuizPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import quizQuestions, { quizQuestions as namedQuiz } from "../data/quizQuestions.js";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import supabase from "../lib/supabaseClient.js";
 import { normalizeForScorer } from "../lib/quizMap.js";
 import { runProcessQuiz } from "../lib/api.js";
+import LoadingScreen from "../components/LoadingScreen.jsx";
+import { Button } from "../components/PremiumComponents";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 const green = "var(--accent-500)";
 const hair = "var(--border)";
@@ -16,14 +20,40 @@ const LS_KEY = "rootd_quiz_v2";
 function Progress({ current, total }) {
   const pct = Math.round(((current + 1) / total) * 100);
   return (
-    <div>
-      <div aria-hidden style={{ height: 10, borderRadius: 999, background: "#EEF4F7", border: `1px solid ${hair}`, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: green, transition: "width .2s ease" }} />
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div aria-hidden style={{ 
+        height: 12, 
+        borderRadius: 999, 
+        background: "#EEF4F7", 
+        border: "1px solid #e5e7eb", 
+        overflow: "hidden",
+        boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.06)"
+      }}>
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          style={{ 
+            height: "100%", 
+            background: "linear-gradient(90deg, #10b981 0%, #059669 100%)",
+            boxShadow: "0 2px 4px rgba(5, 150, 105, 0.3)"
+          }} 
+        />
       </div>
-      <div className="subtle" style={{ marginTop: 6, fontWeight: 800 }}>
+      <div style={{ 
+        marginTop: 8, 
+        fontWeight: 700,
+        fontSize: "14px",
+        color: "#6b7280",
+        letterSpacing: "0.025em"
+      }}>
         {pct}% complete · {current + 1} of {total}
       </div>
-    </div>
+    </motion.div>
   );
 }
 function CategoryChip({ text }) {
@@ -263,6 +293,15 @@ export default function QuizPage() {
     }
   };
 
+  // Show loading screen while submitting
+  if (saving) {
+    return (
+      <AnimatePresence>
+        <LoadingScreen message="Analyzing your results…" />
+      </AnimatePresence>
+    );
+  }
+
   if (!q) return null;
 
   const renderQuestion = () => {
@@ -429,14 +468,34 @@ export default function QuizPage() {
           <div className="subtle">Final score computed server-side on submit.</div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
-          <button className="btn" onClick={handleBack} disabled={step === 0}>← Back</button>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, gap: 12, flexWrap: "wrap" }}>
+          <Button 
+            variant="secondary" 
+            onClick={handleBack} 
+            disabled={step === 0}
+            icon={ArrowLeft}
+          >
+            Back
+          </Button>
           {step < total - 1 ? (
-            <button className="btn btn-primary" onClick={handleNext} disabled={!canContinue}>Next →</button>
+            <Button 
+              variant="primary" 
+              onClick={handleNext} 
+              disabled={!canContinue}
+              icon={ArrowRight}
+            >
+              Next
+            </Button>
           ) : (
-            <button className="btn btn-primary" onClick={submit} disabled={!canContinue || saving}>
+            <Button 
+              variant="primary" 
+              onClick={submit} 
+              disabled={!canContinue || saving}
+              icon={Check}
+              size="lg"
+            >
               {saving ? "Submitting…" : "Submit Quiz"}
-            </button>
+            </Button>
           )}
         </div>
 

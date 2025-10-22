@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useMatches } from '../../hooks/useMatches';
 import { useAuth } from '../../auth/AuthProvider';
 import supabase from '../../lib/supabaseClient';
 import ProposeDealModal from './ProposeDealModal.jsx';
+import { SkeletonMatchGrid } from '../SkeletonLoaders.jsx';
 
 export default function BusinessMatches({ onRefreshAvailable }){
   const { matches, loading, loadMore, refreshMatches } = useMatches();
@@ -394,9 +396,18 @@ export default function BusinessMatches({ onRefreshAvailable }){
         </div>
       </div>
 
+      {/* Loading Skeleton */}
+      {loading && matches.length === 0 && (
+        <SkeletonMatchGrid count={6} />
+      )}
+
       {/* Empty State */}
       {(!loading && filteredMatches.length === 0) && (
-        <div style={{
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{
           background: 'white',
           border: '1px solid var(--hair)',
           borderRadius: 'var(--radius-lg)',
@@ -408,33 +419,32 @@ export default function BusinessMatches({ onRefreshAvailable }){
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>No matches yet</div>
           <div style={{ fontSize: 15, marginBottom: 16 }}>Run "Find New Matches" above to generate partnerships based on your quiz.</div>
           <div style={{ fontSize: 13 }}>Tip: Make sure your quiz includes your location so we can calculate distance.</div>
-        </div>
+        </motion.div>
       )}
 
       {/* Matches Grid */}
+      <AnimatePresence mode="wait">
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: 'var(--space-lg)'
       }}>
         {filteredMatches?.map((m, index) => (
-          <div key={`${m.business_place_id || m.id}-${index}`} style={{
+          <motion.div
+            key={`${m.business_place_id || m.id}-${index}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-lg)' }}
+            style={{
             background: 'white',
             borderRadius: 'var(--radius-lg)',
             padding: 'var(--space-lg)',
             border: '1px solid var(--hair)',
             boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             position: 'relative',
             overflow: 'hidden'
-          }}
-          onMouseEnter={e => {
-            e.target.style.transform = 'translateY(-4px)';
-            e.target.style.boxShadow = 'var(--shadow-lg)';
-          }}
-          onMouseLeave={e => {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = 'var(--shadow-sm)';
           }}>
             
             {/* Match Score Badge */}
@@ -577,9 +587,10 @@ export default function BusinessMatches({ onRefreshAvailable }){
                 ✨ Generate Pitch
               </button>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
+      </AnimatePresence>
 
       {/* Loading Indicator */}
       <div ref={loader} style={{

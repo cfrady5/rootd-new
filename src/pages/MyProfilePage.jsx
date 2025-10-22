@@ -1,7 +1,10 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import ProfileOverview from '../components/dashboard/ProfileOverview.jsx';
 import SocialAnalytics from '../components/dashboard/SocialAnalytics.jsx';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import { PageHeader, Button } from '../components/PremiumComponents';
+import { LogOut } from 'lucide-react';
 
 export default function MyProfilePage() {
   const { signOut } = useAuth();
@@ -18,47 +21,51 @@ export default function MyProfilePage() {
     }
   };
   return (
-    <div className="page-container">
-      <div className="page-content">
-        {/* Header */}
-        <div style={{
-          marginBottom: 'var(--space-xl)',
-          textAlign: 'center'
-        }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: '800',
-            color: 'var(--ink)',
-            margin: '0 0 12px 0',
-            letterSpacing: '-0.02em'
-          }}>
-            My Profile
-          </h1>
-          <p style={{
-            fontSize: '18px',
-            color: 'var(--muted)',
-            margin: 0,
-            fontWeight: '500'
-          }}>
-            Manage your athlete profile and social presence
-          </p>
-        </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        background: "#f9fafb",
+        minHeight: "100vh",
+        padding: "24px"
+      }}
+    >
+      <div style={{
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        {/* Premium Header */}
+        <PageHeader
+          title="My Profile"
+          subtitle="Manage your athlete profile and social presence"
+        />
 
         {/* Profile Management */}
-        <ProfileOverview />
+        <div style={{ marginBottom: "24px" }}>
+          <ProfileOverview />
+        </div>
         
         {/* Social Media Analytics */}
-        <SocialAnalytics />
+        <div style={{ marginBottom: "24px" }}>
+          <SocialAnalytics />
+        </div>
         
-        {/* Additional Profile Settings */}
-        <div style={{
-          background: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-xl)',
-          border: '1px solid var(--hair)',
-          boxShadow: 'var(--shadow-md)',
-          marginBottom: 'var(--space-xl)'
-        }}>
+        {/* Additional Profile Settings - Enhanced Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            marginBottom: '24px'
+          }}
+        >
           <h2 style={{
             fontSize: '22px',
             fontWeight: '700',
@@ -229,82 +236,67 @@ export default function MyProfilePage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Account Actions */}
-        <div style={{
-          background: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-xl)',
-          border: '1px solid var(--hair)',
-          boxShadow: 'var(--shadow-md)',
-          marginBottom: 'var(--space-xl)'
-        }}>
+        {/* Account Actions - Enhanced Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            marginBottom: '24px'
+          }}
+        >
           <h2 style={{
             fontSize: '22px',
             fontWeight: '700',
-            color: 'var(--ink)',
+            color: '#111827',
             margin: '0 0 20px 0',
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-sm)'
+            gap: '12px'
           }}>
             🚪 Account Actions
           </h2>
           
           <div style={{
-            padding: 'var(--space-lg)',
-            background: 'var(--bg)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--hair)'
+            padding: '20px',
+            background: '#f9fafb',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb'
           }}>
             <h3 style={{
               fontSize: '18px',
               fontWeight: '700',
-              color: 'var(--ink)',
+              color: '#111827',
               margin: '0 0 12px 0'
             }}>
               Sign Out
             </h3>
             <p style={{
               fontSize: '15px',
-              color: 'var(--muted)',
+              color: '#6b7280',
               margin: '0 0 16px 0',
               lineHeight: '1.5'
             }}>
               Sign out of your account. You'll be redirected to the login page.
             </p>
             
-            <button
+            <Button
               onClick={handleSignOut}
-              style={{
-                background: '#DC2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px 24px',
-                fontSize: '15px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-sm)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = '#B91C1C';
-                e.target.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = '#DC2626';
-                e.target.style.transform = 'translateY(0)';
-              }}
+              variant="danger"
+              icon={LogOut}
             >
-              🚪 Sign Out
-            </button>
+              Sign Out
+            </Button>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

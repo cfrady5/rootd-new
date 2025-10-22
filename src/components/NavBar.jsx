@@ -1,5 +1,5 @@
 // src/components/NavBar.jsx
-import React, { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import logo from "../assets/rootd-logo.png";
@@ -7,12 +7,12 @@ import logo from "../assets/rootd-logo.png";
 export default function NavBar() {
   const { session } = useAuth() ?? {};
   useNavigate();
-  const [open, setOpen] = useState(false);
 
   const navLinks = [
     { to: "/demo", label: "Demo" },
     { to: "/pricing", label: "Pricing" },
     { to: "/about", label: "About" },
+    { to: "/director/overview", label: "Director" },
   ];
 
   return (
@@ -35,8 +35,8 @@ export default function NavBar() {
           </Link>
         </div>
 
-        {/* Desktop nav */}
-        <nav style={{ display: "flex", alignItems: "center", gap: 12 }} className="nav-desktop">
+        {/* Nav links */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {navLinks.map((l) => (
             <Link key={l.to} to={l.to} style={{ textDecoration: "none", color: "var(--text)", fontWeight: 600, padding: "8px 12px" }}>{l.label}</Link>
           ))}
@@ -45,55 +45,14 @@ export default function NavBar() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!session ? (
             <>
-              <Link to="/login" className="btn nav-desktop">Log In</Link>
+              <Link to="/login" className="btn">Log In</Link>
               <Link to="/signup" className="btn btn-primary">Sign Up</Link>
             </>
           ) : (
             <Link to="/dashboard/profile" className="btn">Dashboard</Link>
           )}
-
-          {/* Mobile hamburger */}
-          <button
-            className="mobile-hamburger"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            style={{ background: "transparent", border: 0, fontSize: 22 }}
-          >
-            {open ? "✕" : "☰"}
-          </button>
         </div>
       </div>
-
-      {/* Mobile menu overlay */}
-      {open && (
-        <div id="mobile-menu" className={`mobile-menu ${open ? "open" : ""}`} aria-hidden={!open}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 16 }}>
-            {navLinks.map((l) => (
-              <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="mobile-link">
-                {l.label}
-              </Link>
-            ))}
-            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-              {!session ? (
-                <>
-                  <Link to="/login" className="btn" onClick={() => setOpen(false)}>
-                    Log In
-                  </Link>
-                  <Link to="/signup" className="btn btn-primary" onClick={() => setOpen(false)}>
-                    Sign Up
-                  </Link>
-                </>
-              ) : (
-                <Link to="/dashboard" className="btn" onClick={() => setOpen(false)}>
-                  Dashboard
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

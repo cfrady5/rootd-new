@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 // import { useAuth } from '../auth/AuthProvider.jsx';
 import HeaderBar from '../components/dashboard/HeaderBar.jsx';
-import MetricCards from '../components/dashboard/MetricCards.jsx';
 import BusinessMatches from '../components/dashboard/BusinessMatches.jsx';
 import UserSummary from '../components/dashboard/UserSummary.jsx';
 import { useToasts } from '../components/dashboard/useToasts.js';
+import { PageHeader } from '../components/PremiumComponents';
 
 export default function MatchesPage() {
   // const { session } = (useAuth?.() ?? {});
@@ -43,45 +44,39 @@ export default function MatchesPage() {
   }, [refreshMatchesFn, toasts]);
   
   return (
-    <div className="page-container">
-      <div className="page-content">
-        {/* Header */}
-        <div style={{
-          marginBottom: 'var(--space-xl)',
-          textAlign: 'center'
-        }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: '800',
-            color: 'var(--ink)',
-            margin: '0 0 12px 0',
-            letterSpacing: '-0.02em'
-          }}>
-            Brand Matches
-          </h1>
-          <p style={{
-            fontSize: '18px',
-            color: 'var(--muted)',
-            margin: 0,
-            fontWeight: '500'
-          }}>
-            Discover partnership opportunities tailored to your profile
-          </p>
-        </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        background: "#f9fafb",
+        minHeight: "100vh",
+        padding: "24px"
+      }}
+    >
+      <div style={{
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        {/* Premium Header */}
+        <PageHeader
+          title="Brand Matches"
+          subtitle="Discover partnership opportunities tailored to your profile"
+        />
 
         {/* User AI Summary */}
-        <UserSummary />
+        <div style={{ marginBottom: "24px" }}>
+          <UserSummary />
+        </div>
 
         {/* Progress Overview */}
         <HeaderBar onRefreshMatches={onHeaderRefresh} />
-        
-        {/* Match Metrics */}
-        <MetricCards />
         
         {/* Matches Display */}
         <div ref={matchesRef} />
         <BusinessMatches onRefreshAvailable={handleRefreshAvailable} />
       </div>
-    </div>
+    </motion.div>
   );
 }

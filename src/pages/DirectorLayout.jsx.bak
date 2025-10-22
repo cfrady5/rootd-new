@@ -1,0 +1,294 @@
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../auth/AuthProvider';
+import { getOrgMembers, getNotifications } from '../lib/api/directorComplete';
+import {
+  LayoutDashboard,
+  Handshake,
+  Users,
+  Building2,
+  ShieldCheck,
+  DollarSign,
+  CheckSquare,
+  Settings,
+  Bell,
+  Menu,
+  X,
+  LogOut
+} from 'lucide-react';
+
+const navItems = [
+  { path: '/director/overview', label: 'Overview', icon: LayoutDashboard },
+  { path: '/director/deals', label: 'Deals', icon: Handshake },
+  { path: '/director/athletes', label: 'Athletes', icon: Users },
+  { path: '/director/brands', label: 'Brands', icon: Building2 },
+  { path: '/director/compliance', label: 'Compliance', icon: ShieldCheck },
+  { path: '/director/finance', label: 'Finance', icon: DollarSign },
+  { path: '/director/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/director/settings', label: 'Settings', icon: Settings }
+];
+
+export default function DirectorLayout() {
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [orgName, setOrgName] = useState('Rootd Organization');
+  const [userRole, setUserRole] = useState('Director');
+
+  // Fetch org info from session or profile
+  useEffect(() => {
+    const fetchOrgInfo = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        // Get org members to find user's role and org
+        const members = await getOrgMembers(session.user.org_id || '00000000-0000-0000-0000-000000000000');
+        const currentMember = members.find(m => m.user_id === session.user.id);
+        
+        if (currentMember) {
+          setUserRole(currentMember.role);
+          // In a real app, fetch org name from organizations table
+          setOrgName(currentMember.org_id.slice(0, 8).toUpperCase());
+        }
+      } catch (error) {
+        console.error('Failed to fetch org info:', error);
+      }
+    };
+
+    fetchOrgInfo();
+  }, [session]);
+
+  // Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!session?.user?.id) return;
+
+      try {
+        const data = await getNotifications(session.user.id, false);
+        setNotifications(data || []);
+        setUnreadCount(data?.filter(n => !n.read_at).length || 0);
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const toggleNotifications = () => {
+    setNotificationsOpen(!notificationsOpen);
+  };
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f9fafb', overflow: 'hidden' }}>
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 40,
+            display: window.innerWidth < 1024 ? 'block' : 'none'
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        style={{
+          position: window.innerWidth < 1024 ? 'fixed' : 'relative',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: '256px',
+          backgroundColor: 'white',
+          borderRight: '1px solid #e5e7eb',
+          zIndex: 50,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.2s ease-in-out',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Logo */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          padding: '16px 24px',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', margin: 0 }}>{orgName}</h1>
+            <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0', textTransform: 'capitalize' }}>{userRole} Portal</p>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              display: window.innerWidth < 1024 ? 'block' : 'none',
+              padding: '8px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer'
+            }}
+          >
+            <X style={{ width: '20px', height: '20px' }} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav style={{ 
+          flex: 1, 
+          padding: '12px', 
+          overflowY: 'auto'
+        }}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {/* User section */}
+          <div className="px-3 py-4 border-t border-gray-200">
+            <div className="flex items-center gap-3 px-3 py-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                <span className="text-sm font-semibold text-emerald-700">
+                  {session?.user?.email?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {session?.user?.email}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            <div className="flex-1 lg:flex-initial" />
+
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                onClick={toggleNotifications}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <Bell className="w-6 h-6 text-gray-700" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+
+              {/* Notifications dropdown */}
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="px-4 py-3 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Notifications
+                      </h3>
+                      {unreadCount > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {unreadCount} unread
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-sm text-gray-500">
+                        No notifications
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                            !notification.read_at ? 'bg-emerald-50/50' : ''
+                          }`}
+                        >
+                          <p className="text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-2 border-t border-gray-200">
+                      <button className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+                        View all notifications
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -44,7 +44,10 @@ export default function NavBar() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!session ? (
-            <Link to="/signup" className="btn btn-primary">Sign Up</Link>
+            <>
+              <Link to="/login" className="btn nav-desktop">Log In</Link>
+              <Link to="/signup" className="btn btn-primary">Sign Up</Link>
+            </>
           ) : (
             <Link to="/dashboard/profile" className="btn">Dashboard</Link>
           )}
@@ -72,11 +75,16 @@ export default function NavBar() {
                 {l.label}
               </Link>
             ))}
-            <div style={{ marginTop: 8 }}>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
               {!session ? (
-                <Link to="/signup" className="btn btn-primary" onClick={() => setOpen(false)}>
-                  Sign Up
-                </Link>
+                <>
+                  <Link to="/login" className="btn" onClick={() => setOpen(false)}>
+                    Log In
+                  </Link>
+                  <Link to="/signup" className="btn btn-primary" onClick={() => setOpen(false)}>
+                    Sign Up
+                  </Link>
+                </>
               ) : (
                 <Link to="/dashboard" className="btn" onClick={() => setOpen(false)}>
                   Dashboard

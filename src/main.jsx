@@ -5,6 +5,8 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import AuthProvider from './auth/AuthProvider.jsx'
 import './styles/apple-design-system.css'
+import './styles/theme.css'
+import './styles/globals.css'
 import './index.css'
 import "./App.css";
 

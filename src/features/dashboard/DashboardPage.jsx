@@ -1,15 +1,16 @@
 import React from 'react';
 import RootLayout from '../../app/RootLayout.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
+import StatCard from '../../components/ui/StatCard.jsx';
 
 export default function DashboardPage(){
   return (
     <RootLayout>
       <PageHeader title="Dashboard" description="Overview of your performance" />
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px,1fr))',gap:16}}>
-        <div style={{background:'#fff',border:'1px solid var(--color-border)',padding:16,borderRadius:12}}>Total Matches: 0</div>
-        <div style={{background:'#fff',border:'1px solid var(--color-border)',padding:16,borderRadius:12}}>Saved Deals: 0</div>
-        <div style={{background:'#fff',border:'1px solid var(--color-border)',padding:16,borderRadius:12}}>Unread Messages: 0</div>
+        <StatCard label="Total Matches" value={0} trend="up" change={0} />
+        <StatCard label="Saved Deals" value={0} trend="up" change={0} />
+        <StatCard label="Unread Messages" value={0} trend="down" change={0} />
       </div>
     </RootLayout>
   );

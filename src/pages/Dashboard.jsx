@@ -101,7 +101,7 @@ export default function Dashboard() {
       transition={{ duration: 0.3 }}
       style={{ 
         background: "#f9fafb",
-        minHeight: "100vh",
+  minHeight: "calc(100dvh - var(--nav-height))",
         padding: "24px"
       }}
     >

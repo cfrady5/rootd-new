@@ -89,11 +89,7 @@ export default function DemoPage() {
   const [showBanner, setShowBanner] = useState(true);
 
   return (
-    <div className="page-container" style={{ 
-      background: 'var(--bg-primary)',
-      minHeight: '100vh',
-      paddingTop: '80px'
-    }}>
+    <div className="page-container" style={{ background: 'var(--bg-primary)' }}>
       <div className="page-content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 80px' }}>
         {showBanner && (
           <div style={{

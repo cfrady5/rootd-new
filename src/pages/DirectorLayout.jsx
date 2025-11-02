@@ -38,7 +38,7 @@ export default function DirectorLayout() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb', paddingTop: '60px' }}>
+  <div style={{ display: 'flex', minHeight: 'calc(100dvh - var(--nav-height))', backgroundColor: '#f9fafb', paddingTop: 'var(--nav-height)' }}>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div

@@ -49,6 +49,7 @@ export default function FooterCTA() {
       {/* Footer */}
       <footer style={{
         padding: '60px 40px',
+        paddingBottom: 'calc(60px + env(safe-area-inset-bottom))',
         background: '#1d1d1f',
         color: '#f5f5f7'
       }}>

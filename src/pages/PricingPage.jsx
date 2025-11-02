@@ -71,11 +71,9 @@ export default function PricingPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
+    <div className="page-container" style={{
       background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      paddingTop: '80px'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
 
       {/* Hero Section */}

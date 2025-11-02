@@ -200,7 +200,7 @@ export default function HomePage() {
     n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
   return (
-    <div className="page-container" style={{ background: "#f5f7fa" }}>
+  <div className="page-container" style={{ background: "#f5f7fa" }}>
       {/* HERO */}
       <section
         style={{
@@ -209,7 +209,7 @@ export default function HomePage() {
           alignItems: "center",
           justifyContent: "center",
           textAlign: "center",
-          minHeight: "75vh",
+          /* Avoid forcing near-full viewport height so footer spacing remains consistent */
           background: "#f5f7fa",
           padding: "80px 24px 80px",
         }}

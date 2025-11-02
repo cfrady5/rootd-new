@@ -41,19 +41,5 @@ export default function RequireRole({ allowedRoles, children, redirectTo = '/das
  * @param {string[]} allowedRoles - Array of allowed roles
  * @returns {{hasRole: boolean, role: string|null, loading: boolean}}
  */
-export function useRequireRole(allowedRoles) {
-  const auth = useAuth();
-
-  if (!auth || auth.loading) {
-    return { hasRole: false, role: null, loading: true };
-  }
-
-  if (!auth.session) {
-    return { hasRole: false, role: null, loading: false };
-  }
-
-  const userRole = auth.session.user?.user_metadata?.role || auth.session.user?.role;
-  const hasRole = userRole && allowedRoles.includes(userRole);
-
-  return { hasRole, role: userRole, loading: false };
-}
+// Note: useRequireRole hook has been moved to './useRequireRole.js' to satisfy
+// Fast Refresh rule requiring files to only export components.

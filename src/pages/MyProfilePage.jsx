@@ -3,8 +3,21 @@ import { motion } from 'framer-motion';
 import ProfileOverview from '../components/dashboard/ProfileOverview.jsx';
 import SocialAnalytics from '../components/dashboard/SocialAnalytics.jsx';
 import { useAuth } from '../auth/AuthProvider.jsx';
-import { PageHeader, Button } from '../components/PremiumComponents';
-import { LogOut } from 'lucide-react';
+import { 
+  AppleDashboardSection, 
+  AppleMetricCard,
+  AppleProgressBar 
+} from '../components/AppleDashboardComponents.jsx';
+import { 
+  LogOut, 
+  User, 
+  Instagram, 
+  Twitter, 
+  Settings,
+  Shield,
+  Star,
+  Trophy
+} from 'lucide-react';
 
 export default function MyProfilePage() {
   const { signOut } = useAuth();
@@ -22,281 +35,231 @@ export default function MyProfilePage() {
   };
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      style={{
-        background: "#f9fafb",
-        minHeight: "100vh",
-        padding: "24px"
-      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
     >
-      <div style={{
-        maxWidth: "1400px",
-        margin: "0 auto"
+      {/* Page Header */}
+      <div className="apple-flex apple-items-center apple-justify-between" style={{ 
+        marginBottom: "var(--apple-space-8)" 
       }}>
-        {/* Premium Header */}
-        <PageHeader
-          title="My Profile"
-          subtitle="Manage your athlete profile and social presence"
-        />
+        <div>
+          <h1 className="apple-heading-1" style={{ 
+            margin: "0 0 var(--apple-space-2) 0"
+          }}>
+            Profile
+          </h1>
+          <p className="apple-body-large" style={{ 
+            color: "var(--apple-text-secondary)",
+            margin: 0 
+          }}>
+            Manage your athlete profile and social presence
+          </p>
+        </div>
+        
+        <button 
+          onClick={handleSignOut}
+          className="apple-btn apple-btn-ghost apple-flex apple-items-center apple-gap-2"
+          style={{ color: "var(--apple-red)" }}
+        >
+          <LogOut size={16} />
+          Sign Out
+        </button>
+      </div>
 
-        {/* Profile Management */}
-        <div style={{ marginBottom: "24px" }}>
+      {/* Profile Stats */}
+      <AppleDashboardSection 
+        title="Profile Overview" 
+        description="Your current profile status and metrics"
+      >
+        <div className="apple-grid apple-grid-cols-4" style={{ marginBottom: "var(--apple-space-8)" }}>
+          <AppleMetricCard
+            title="Profile Score"
+            value="92%"
+            change="+8%"
+            trend="up"
+            icon={Star}
+            color="success"
+          />
+          <AppleMetricCard
+            title="Social Reach"
+            value="12.5K"
+            change="+2.1K"
+            trend="up"
+            icon={Instagram}
+            color="info"
+          />
+          <AppleMetricCard
+            title="Brand Matches"
+            value="8"
+            change="+3"
+            trend="up"
+            icon={Trophy}
+            color="warning"
+          />
+          <AppleMetricCard
+            title="Compliance"
+            value="100%"
+            change="0%"
+            trend="up"
+            icon={Shield}
+            color="success"
+          />
+        </div>
+      </AppleDashboardSection>
+
+      {/* Profile Completion */}
+      <AppleDashboardSection 
+        title="Profile Completion"
+        description="Complete your profile to unlock better brand matches"
+      >
+        <div className="apple-card" style={{ marginBottom: "var(--apple-space-8)" }}>
+          <div style={{ marginBottom: "var(--apple-space-6)" }}>
+            <AppleProgressBar
+              value={75}
+              max={100}
+              color="success"
+              size="lg"
+              label="Profile Completion"
+              showValue={true}
+            />
+          </div>
+          
+          <div className="apple-grid apple-grid-cols-2 apple-gap-4">
+            <div className="apple-flex apple-items-center apple-gap-3">
+              <div style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--apple-green-primary)"
+              }} />
+              <span className="apple-body-small" style={{ color: "var(--apple-text-secondary)" }}>
+                Basic info completed
+              </span>
+            </div>
+            <div className="apple-flex apple-items-center apple-gap-3">
+              <div style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--apple-green-primary)"
+              }} />
+              <span className="apple-body-small" style={{ color: "var(--apple-text-secondary)" }}>
+                Social accounts linked
+              </span>
+            </div>
+            <div className="apple-flex apple-items-center apple-gap-3">
+              <div style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--apple-gray-300)"
+              }} />
+              <span className="apple-body-small" style={{ color: "var(--apple-text-tertiary)" }}>
+                Portfolio media needed
+              </span>
+            </div>
+            <div className="apple-flex apple-items-center apple-gap-3">
+              <div style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--apple-gray-300)"
+              }} />
+              <span className="apple-body-small" style={{ color: "var(--apple-text-tertiary)" }}>
+                Brand preferences needed
+              </span>
+            </div>
+          </div>
+        </div>
+      </AppleDashboardSection>
+
+      {/* Profile Management - using existing component but styled */}
+      <AppleDashboardSection 
+        title="Profile Details" 
+        description="Edit your personal information and preferences"
+        action={{ label: "Edit Profile", onClick: () => {} }}
+      >
+        <div className="apple-card" style={{ marginBottom: "var(--apple-space-8)" }}>
           <ProfileOverview />
         </div>
+      </AppleDashboardSection>
         
-        {/* Social Media Analytics */}
-        <div style={{ marginBottom: "24px" }}>
+      {/* Social Media Analytics - using existing component */}
+      <AppleDashboardSection 
+        title="Social Analytics" 
+        description="Track your social media performance and engagement"
+      >
+        <div className="apple-card">
           <SocialAnalytics />
         </div>
+      </AppleDashboardSection>
         
-        {/* Additional Profile Settings - Enhanced Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '32px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            marginBottom: '24px'
-          }}
-        >
-          <h2 style={{
-            fontSize: '22px',
-            fontWeight: '700',
-            color: 'var(--ink)',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-sm)'
-          }}>
-            ⚙️ Profile Settings
-          </h2>
-          
-          <div style={{
-            display: 'grid',
-            gap: 'var(--space-lg)',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
-          }}>
-            
-            {/* Visibility Settings */}
-            <div style={{
-              padding: 'var(--space-lg)',
-              background: 'var(--bg)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--hair)'
-            }}>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '700',
-                color: 'var(--ink)',
-                margin: '0 0 12px 0'
-              }}>
-                Profile Visibility
-              </h3>
-              <p style={{
-                fontSize: '15px',
-                color: 'var(--muted)',
-                margin: '0 0 16px 0',
-                lineHeight: '1.5'
-              }}>
-                Control who can see your profile and contact you for partnerships
-              </p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" defaultChecked style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  Visible to verified brands
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" defaultChecked style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  Show in match recommendations
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  Allow direct messages
-                </label>
-              </div>
-            </div>
-            
-            {/* Notification Preferences */}
-            <div style={{
-              padding: 'var(--space-lg)',
-              background: 'var(--bg)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--hair)'
-            }}>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '700',
-                color: 'var(--ink)',
-                margin: '0 0 12px 0'
-              }}>
-                Notifications
-              </h3>
-              <p style={{
-                fontSize: '15px',
-                color: 'var(--muted)',
-                margin: '0 0 16px 0',
-                lineHeight: '1.5'
-              }}>
-                Choose how you want to be notified about new opportunities
-              </p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" defaultChecked style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  New brand matches
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" defaultChecked style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  Partnership proposals
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: 'var(--ink)',
-                  cursor: 'pointer'
-                }}>
-                  <input type="checkbox" style={{
-                    width: '18px',
-                    height: '18px',
-                    accentColor: 'var(--green)'
-                  }} />
-                  Weekly analytics digest
-                </label>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      {/* Additional Profile Settings */}
+      <AppleDashboardSection 
+        title="Settings" 
+        description="Manage your profile preferences and account settings"
+      >
 
-        {/* Account Actions - Enhanced Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '32px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            marginBottom: '24px'
-          }}
-        >
-          <h2 style={{
-            fontSize: '22px',
-            fontWeight: '700',
-            color: '#111827',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            🚪 Account Actions
-          </h2>
-          
-          <div style={{
-            padding: '20px',
-            background: '#f9fafb',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#111827',
-              margin: '0 0 12px 0'
-            }}>
-              Sign Out
+        <div className="apple-grid apple-grid-cols-2">
+          {/* Visibility Settings */}
+          <div className="apple-card">
+            <h3 className="apple-heading-4" style={{ marginBottom: "var(--apple-space-3)" }}>
+              Profile Visibility
             </h3>
-            <p style={{
-              fontSize: '15px',
-              color: '#6b7280',
-              margin: '0 0 16px 0',
-              lineHeight: '1.5'
+            <p className="apple-body-small" style={{ 
+              color: "var(--apple-text-secondary)",
+              marginBottom: "var(--apple-space-4)"
             }}>
-              Sign out of your account. You'll be redirected to the login page.
+              Control who can see your profile and contact you for partnerships
             </p>
             
-            <Button
-              onClick={handleSignOut}
-              variant="danger"
-              icon={LogOut}
-            >
-              Sign Out
-            </Button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--apple-space-3)' }}>
+              <label className="apple-flex apple-items-center apple-gap-3" style={{ cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  defaultChecked 
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    accentColor: 'var(--rootd-green)'
+                  }} 
+                />
+                <span className="apple-body">Visible to verified brands</span>
+              </label>
+            </div>
           </div>
-        </motion.div>
-      </div>
+          
+          {/* Notification Preferences */}
+          <div className="apple-card">
+            <h3 className="apple-heading-4" style={{ marginBottom: "var(--apple-space-3)" }}>
+              Notifications
+            </h3>
+            <p className="apple-body-small" style={{ 
+              color: "var(--apple-text-secondary)",
+              marginBottom: "var(--apple-space-4)"
+            }}>
+              Choose how you want to be notified about new opportunities
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--apple-space-3)' }}>
+              <label className="apple-flex apple-items-center apple-gap-3" style={{ cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  defaultChecked 
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    accentColor: 'var(--rootd-green)'
+                  }} 
+                />
+                <span className="apple-body">New brand matches</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </AppleDashboardSection>
     </motion.div>
   );
 }

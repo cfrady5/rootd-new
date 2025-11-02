@@ -34,7 +34,7 @@ export default function DirectorPortal() {
     return (
       <div className="page-container" style={{ 
         background: 'var(--bg-primary)',
-        minHeight: '100vh',
+  minHeight: 'calc(100dvh - var(--nav-height))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -78,7 +78,7 @@ export default function DirectorPortal() {
   return (
     <div className="page-container" style={{ 
       background: 'var(--bg-primary)',
-      minHeight: '100vh',
+  minHeight: 'calc(100dvh - var(--nav-height))',
       paddingTop: 'var(--space-2xl)'
     }}>
       <div className="page-content" style={{ maxWidth: '1200px', margin: '0 auto', padding: 'var(--space-xl)' }}>

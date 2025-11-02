@@ -46,7 +46,7 @@ export default function InstagramCallback() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: '100vh',
+  minHeight: 'calc(100dvh - var(--nav-height))',
       padding: '24px',
       backgroundColor: 'var(--bg-primary)',
       color: 'var(--text-primary)'

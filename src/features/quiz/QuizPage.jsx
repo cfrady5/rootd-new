@@ -5,14 +5,19 @@ import PageHeader from '../../components/ui/PageHeader.jsx';
 import Button from '../../components/ui/Button.jsx';
 import QuestionRenderer from './QuestionRenderer.jsx';
 import { validate } from './validators';
-
-const QUESTIONS = [
-  { id:'q1', title:'What is your sport?', type:'single', options:['Basketball','Football','Soccer'] },
-  { id:'q2', title:'How many hours/week do you train?', type:'slider', min:0, max:40, step:1 },
-];
+import quizQuestions from '../../data/quizQuestions.js';
 
 function QuizInner(){
   const { state, dispatch } = useQuiz();
+  const QUESTIONS = quizQuestions.map(q => ({
+    id: String(q.id),
+    title: q.question,
+    description: q.category,
+    type: q.type,
+    options: q.options,
+    min: q.min, max: q.max, step: q.step,
+    fields: q.fields, maxRank: q.max
+  }));
   const q = QUESTIONS[state.step] || null;
 
   const { error } = useMemo(() => {
@@ -23,7 +28,7 @@ function QuizInner(){
 
   return (
     <RootLayout>
-      <PageHeader title="Quiz" description="Answer a few questions to get matched." />
+      <PageHeader title="Quiz" description={`Question ${Math.min(state.step+1, QUESTIONS.length)} of ${QUESTIONS.length}`} />
 
       {q ? (
         <div style={{display:'grid',gap:16}}>
